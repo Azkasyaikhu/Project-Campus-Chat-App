@@ -3,77 +3,355 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Group Chat - Tugas IPI Umam</title>
-    <!-- Memanggil library Socket.io klien dari servermu -->
-    <script src="http://localhost:3003/socket.io/socket.io.js"></script>
+    <title>Campus Chat App - Group Chat Node</title>
+    
+    <!-- Google Fonts & Lucide Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Memanggil library Socket.io -->
+    <script src="/socket.io/socket.io.js"></script>
+
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 20px auto; padding: 20px; background-color: #f4f7f6; }
-        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        input, select, button { padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
-        button { background-color: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; }
-        button:hover { background-color: #0056b3; }
-        #chat-box { height: 300px; border: 1px solid #ddd; overflow-y: auto; padding: 10px; margin-bottom: 10px; background-color: #fafafa; border-radius: 4px; }
-        .msg { margin-bottom: 8px; padding: 5px 10px; border-radius: 4px; width: fit-content; max-width: 80%; }
-        .msg.system { color: #888; font-style: italic; font-size: 0.9em; margin: 5px auto; background: none; }
-        .msg.me { background-color: #d1ecf1; color: #0c5460; margin-left: auto; border-bottom-right-radius: 0; }
-        .msg.other { background-color: #e2e3e5; color: #383d41; margin-right: auto; border-bottom-left-radius: 0; }
+        :root {
+            --primary: #1e3a8a;       
+            --primary-hover: #1e40af;
+            --accent: #3b82f6;        
+            --bg-main: #0f172a;       
+            --card-bg: #1e293b;       
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --success: #10b981;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+            background: radial-gradient(circle at top left, #1e1b4b, #0f172a);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 24px;
+        }
+
+        /* Top Bar Info Node */
+        .node-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid var(--border);
+            backdrop-filter: blur(8px);
+            padding: 8px 16px;
+            border-radius: 99px;
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 24px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--success);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        /* Main Container */
+        .app-card {
+            width: 100%;
+            max-width: 500px;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 32px;
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+        }
+
+        .brand-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .brand-icon {
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, #10b981, #059669); /* Warna hijau untuk membedakan dari Auth */
+            border-radius: 14px;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            margin-bottom: 16px;
+            box-shadow: 0 8px 16px rgba(16, 185, 129, 0.3);
+        }
+
+        .brand-header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 6px;
+        }
+
+        .brand-header p {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        /* Input Styles */
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-wrapper i {
+            position: absolute;
+            left: 14px;
+            color: var(--text-muted);
+            width: 18px;
+            height: 18px;
+        }
+
+        .input-wrapper input, .input-wrapper select {
+            width: 100%;
+            padding: 12px 14px 12px 42px;
+            background-color: #0f172a;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text-main);
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s ease;
+            appearance: none; /* Menghilangkan panah default select */
+        }
+
+        .input-wrapper input:focus, .input-wrapper select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        /* Chat Specific Styles */
+        #chat-box {
+            height: 350px;
+            background-color: #090d16;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            overflow-y: auto;
+            margin-bottom: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .msg {
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 13.5px;
+            max-width: 85%;
+            width: fit-content;
+            line-height: 1.5;
+            word-wrap: break-word;
+        }
+
+        .msg.system {
+            background: none;
+            color: var(--text-muted);
+            font-size: 11px;
+            font-style: italic;
+            align-self: center;
+            padding: 4px;
+        }
+
+        .msg.me {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+
+        .msg.other {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+
+        .chat-input-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-primary {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+            width: 100%;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #1d4ed8, #1e40af);
+            transform: translateY(-1px);
+        }
+
+        .btn-icon {
+            width: auto;
+            padding: 12px 16px;
+        }
+
+        .footer-text {
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 24px;
+        }
     </style>
 </head>
 <body>
-    <div class="card">
-        <h2 style="text-align: center; color: #333;">Ruang Diskusi Kuliah</h2>
-        
-        <!-- Bagian Login/Join Room -->
+
+    <!-- Distributed Node Header -->
+    <div class="node-badge">
+        <span class="status-dot"></span>
+        <span>Distributed Node #3 — <strong>Group Chat (Port 3003)</strong></span>
+    </div>
+
+    <div class="app-card">
+        <!-- Bagian Join Room -->
         <div id="join-section">
-            <label>Nama Kamu:</label>
-            <input type="text" id="username" placeholder="Masukkan nama (Misal: Umam)">
-            
-            <label>Pilih Ruang Obrolan:</label>
-            <select id="room">
-                <option value="Sistem Terdistribusi">Sistem Terdistribusi</option>
-                <option value="Jaringan Komputer">Jaringan Komputer</option>
-                <option value="Pemrograman Web">Pemrograman Web</option>
-            </select>
-            
-            <button onclick="joinRoom()">Gabung Ruangan</button>
+            <div class="brand-header">
+                <div class="brand-icon">
+                    <i data-lucide="users"></i>
+                </div>
+                <h1>Ruang Diskusi</h1>
+                <p>Sistem Terdistribusi — Layanan Chat Grup</p>
+            </div>
+
+            <div class="input-group">
+                <label for="username">Nama Pengguna</label>
+                <div class="input-wrapper">
+                    <i data-lucide="user"></i>
+                    <input type="text" id="username" placeholder="Masukkan nama panggilanmu">
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label for="room">Pilih Ruang Kelas</label>
+                <div class="input-wrapper">
+                    <i data-lucide="layout-grid"></i>
+                    <select id="room">
+                        <option value="Sistem Terdistribusi">Sistem Terdistribusi</option>
+                        <option value="Jaringan Komputer">Jaringan Komputer</option>
+                        <option value="Pemrograman Web">Pemrograman Web</option>
+                    </select>
+                </div>
+            </div>
+
+            <button class="btn-primary" onclick="joinRoom()" style="margin-top: 8px;">
+                <i data-lucide="log-in" style="width:16px;"></i> Gabung Ruangan
+            </button>
         </div>
 
-        <!-- Bagian Chatting (Awalnya Disembunyikan) -->
+        <!-- Bagian Chat Room (Disembunyikan saat awal) -->
         <div id="chat-section" style="display:none;">
-            <h3 id="room-title" style="color: #007bff; border-bottom: 2px solid #007bff; padding-bottom: 5px;"></h3>
+            <div class="brand-header" style="margin-bottom: 16px; text-align: left; display: flex; align-items: center; gap: 12px;">
+                <div class="brand-icon" style="width: 40px; height: 40px; margin: 0; border-radius: 10px;">
+                    <i data-lucide="message-square" style="width: 20px;"></i>
+                </div>
+                <div>
+                    <h1 id="room-title" style="font-size: 16px; margin-bottom: 2px;">Nama Ruangan</h1>
+                    <p style="font-size: 12px;">Sedang Online</p>
+                </div>
+            </div>
+
             <div id="chat-box"></div>
-            <div style="display: flex; gap: 10px;">
-                <input type="text" id="message" placeholder="Ketik pesan di sini..." style="flex: 1;">
-                <button onclick="sendMessage()" style="width: 80px;">Kirim</button>
+            
+            <div class="chat-input-row">
+                <div class="input-wrapper" style="flex: 1;">
+                    <i data-lucide="pen-line"></i>
+                    <input type="text" id="message" placeholder="Ketik pesan..." onkeypress="handleEnter(event)">
+                </div>
+                <button class="btn-primary btn-icon" onclick="sendMessage()">
+                    <i data-lucide="send" style="width:18px;"></i>
+                </button>
             </div>
         </div>
     </div>
 
+    <div class="footer-text">
+        Project Sistem Terdistribusi Kelompok • 2026
+    </div>
+
     <script>
-        // Mengkoneksikan Frontend ke Backend (IPI Socket)
-        const socket = io('http://localhost:3003'); 
+        // Inisialisasi ikon UI
+        lucide.createIcons();
+
+        // [PENTING] Menyesuaikan IP secara otomatis sama seperti trik di file Auth temanmu
+        const socket = io(`http://${window.location.hostname}:3003`); 
         
         let currentRoom = '';
         let currentUsername = '';
 
         function joinRoom() {
-            currentUsername = document.getElementById('username').value;
+            currentUsername = document.getElementById('username').value.trim();
             currentRoom = document.getElementById('room').value;
             
-            if(!currentUsername) return alert("Nama tidak boleh kosong!");
+            if(!currentUsername) return alert("Silakan isi nama pengguna terlebih dahulu!");
 
-            // Mengirim event IPI 'join_room' ke server
             socket.emit('join_room', currentRoom);
             
-            // Ubah tampilan UI
             document.getElementById('join-section').style.display = 'none';
             document.getElementById('chat-section').style.display = 'block';
             document.getElementById('room-title').innerText = `Ruang: ${currentRoom}`;
         }
 
+        function handleEnter(e) {
+            if(e.key === 'Enter') sendMessage();
+        }
+
         function sendMessage() {
             const messageInput = document.getElementById('message');
-            const message = messageInput.value;
+            const message = messageInput.value.trim();
             if(!message) return;
 
             const data = {
@@ -82,29 +360,24 @@
                 message: message
             };
 
-            // Mengirim event IPI pesan ke server
             socket.emit('send_group_message', data);
-            
-            displayMessage(`Kamu: ${message}`, 'me');
+            displayMessage(message, 'me');
             messageInput.value = ''; 
         }
 
-        // Menerima pesan dari orang lain
         socket.on('receive_group_message', (data) => {
-            displayMessage(`${data.sender}: ${data.message}`, 'other');
+            displayMessage(`<b>${data.sender}:</b><br>${data.message}`, 'other');
         });
 
-        // Menerima notifikasi sistem (ada orang baru masuk)
         socket.on('system_notification', (msg) => {
             displayMessage(msg, 'system');
         });
 
-        // Fungsi UI untuk mencetak elemen teks ke layar
         function displayMessage(text, type) {
             const chatBox = document.getElementById('chat-box');
             const div = document.createElement('div');
             div.className = `msg ${type}`;
-            div.innerText = text;
+            div.innerHTML = text; // Menggunakan innerHTML agar tag <br> dan <b> terbaca
             chatBox.appendChild(div);
             chatBox.scrollTop = chatBox.scrollHeight; 
         }
