@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Notifikasi Terpusat</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body class="bg-light">
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Live System Notifications</h5>
+                        <span id="status-badge" class="badge bg-danger">Disconnected</span>
+                    </div>
+                    <div class="card-body" style="height: 400px; overflow-y: auto;">
+                        <div id="notification-list" class="d-flex flex-column gap-2">
+                            <!-- Notifikasi akan muncul di sini -->
+                            <div class="text-muted text-center mt-3" id="empty-state">Belum ada notifikasi...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Koneksi ke server Socket.io di localhost:3004
+        const socket = io('http://localhost:3004');
+        const statusBadge = document.getElementById('status-badge');
+        const notificationList = document.getElementById('notification-list');
+        const emptyState = document.getElementById('empty-state');
+
+        socket.on('connect', () => {
+            statusBadge.textContent = 'Connected';
+            statusBadge.classList.replace('bg-danger', 'bg-success');
+        });
+
+        socket.on('disconnect', () => {
+            statusBadge.textContent = 'Disconnected';
+            statusBadge.classList.replace('bg-success', 'bg-danger');
+        });
+
+        // Menerima broadcast dari server
+        socket.on('new_notification', (data) => {
+            if (emptyState) emptyState.style.display = 'none';
+
+            // Menentukan warna alert berdasarkan tipe
+            let alertColor = 'primary';
+            if (data.type === 'success') alertColor = 'success';
+            if (data.type === 'warning') alertColor = 'warning';
+            if (data.type === 'danger') alertColor = 'danger';
+
+            const alertHtml = `
+                <div class="alert alert-${alertColor} alert-dismissible fade show shadow-sm mb-0" role="alert">
+                    <strong>[${data.timestamp}] ${data.title}</strong><br>
+                    ${data.message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `;
+            
+            notificationList.insertAdjacentHTML('afterbegin', alertHtml);
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
