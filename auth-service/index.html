@@ -2,61 +2,386 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Auth Service - User 1</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campus Chat App - Auth Gateway</title>
+    <!-- Google Fonts & Lucide Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        body { font-family: Arial, sans-serif; margin: 40px; max-width: 400px; }
-        input, button { width: 100%; padding: 10px; margin: 8px 0; box-sizing: border-box; }
-        button { background-color: #4CAF50; color: white; border: none; cursor: pointer; }
-        .box { border: 1px solid #ccc; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        :root {
+            --primary: #1e3a8a;       /* Campus Navy */
+            --primary-hover: #1e40af;
+            --accent: #3b82f6;        /* Electric Blue */
+            --bg-main: #0f172a;       /* Dark slate background */
+            --card-bg: #1e293b;       /* Card background */
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --success: #10b981;
+            --error: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+            background: radial-gradient(circle at top left, #1e1b4b, #0f172a);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 24px;
+        }
+
+        /* Top Bar Info Node */
+        .node-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid var(--border);
+            backdrop-filter: blur(8px);
+            padding: 8px 16px;
+            border-radius: 99px;
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 24px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--success);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        /* Main Container */
+        .auth-card {
+            width: 100%;
+            max-width: 460px;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+        }
+
+        .brand-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .brand-icon {
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            border-radius: 14px;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            margin-bottom: 16px;
+            box-shadow: 0 8px 16px rgba(37, 99, 235, 0.3);
+        }
+
+        .brand-header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 6px;
+        }
+
+        .brand-header p {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        /* Input Styles */
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-wrapper i {
+            position: absolute;
+            left: 14px;
+            color: var(--text-muted);
+            width: 18px;
+            height: 18px;
+        }
+
+        .input-wrapper input {
+            width: 100%;
+            padding: 12px 14px 12px 42px;
+            background-color: #0f172a;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text-main);
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .input-wrapper input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        /* Buttons */
+        .actions-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 28px;
+        }
+
+        .btn {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-main);
+        }
+
+        .btn-secondary:hover {
+            background-color: #334155;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #1d4ed8, #1e40af);
+            transform: translateY(-1px);
+        }
+
+        /* Terminal Logs Section */
+        .terminal-section {
+            margin-top: 32px;
+            border-top: 1px solid var(--border);
+            padding-top: 20px;
+        }
+
+        .terminal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .terminal-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-muted);
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .response-status {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 6px;
+            display: none;
+        }
+
+        .response-status.success {
+            background-color: rgba(16, 185, 129, 0.15);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            display: inline-block;
+        }
+
+        .response-status.error {
+            background-color: rgba(239, 68, 68, 0.15);
+            color: var(--error);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            display: inline-block;
+        }
+
+        pre {
+            background-color: #090d16;
+            border: 1px solid #1e293b;
+            color: #38bdf8;
+            padding: 14px;
+            border-radius: 10px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 12px;
+            overflow-x: auto;
+            max-height: 140px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .footer-text {
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 24px;
+        }
     </style>
 </head>
 <body>
-    <h2>Portal Login & Register</h2>
 
-    <div class="box">
-        <h3>Form Akun</h3>
-        <input type="text" id="username" placeholder="Username">
-        <input type="password" id="password" placeholder="Password">
-        <button onclick="register()">Register</button>
-        <button onclick="login()" style="background-color: #008CBA;">Login</button>
+    <!-- Distributed Node Header -->
+    <div class="node-badge">
+        <span class="status-dot"></span>
+        <span>Distributed Node #1 — <strong>Auth Gateway (Port 3001)</strong></span>
     </div>
 
-    <div class="box">
-        <h3>Hasil Response:</h3>
-        <pre id="output">Belum ada aktivitas...</pre>
+    <!-- Main Auth Card -->
+    <div class="auth-card">
+        <div class="brand-header">
+            <div class="brand-icon">
+                <i data-lucide="graduation-cap"></i>
+            </div>
+            <h1>Campus Chat App</h1>
+            <p>Sistem Terdistribusi — Layanan Autentikasi</p>
+        </div>
+
+        <div class="input-group">
+            <label for="username">NIM / Username Kredensial</label>
+            <div class="input-wrapper">
+                <i data-lucide="user"></i>
+                <input type="text" id="username" placeholder="Masukkan username">
+            </div>
+        </div>
+
+        <div class="input-group">
+            <label for="password">Kata Sandi</label>
+            <div class="input-wrapper">
+                <i data-lucide="lock"></i>
+                <input type="password" id="password" placeholder="••••••••">
+            </div>
+        </div>
+
+        <div class="actions-grid">
+            <button class="btn btn-secondary" onclick="register()">
+                <i data-lucide="user-plus" style="width:16px;"></i> Register
+            </button>
+            <button class="btn btn-primary" onclick="login()">
+                <i data-lucide="log-in" style="width:16px;"></i> Login
+            </button>
+        </div>
+
+        <!-- System Output Log -->
+        <div class="terminal-section">
+            <div class="terminal-header">
+                <span class="terminal-title">
+                    <i data-lucide="terminal" style="width:14px;"></i> Payload Response
+                </span>
+                <span id="response-status" class="response-status"></span>
+            </div>
+            <pre id="output">// Menunggu interaksi dari Klien...</pre>
+        </div>
+    </div>
+
+    <div class="footer-text">
+        Project Sistem Terdistribusi Kelompok • 2026
     </div>
 
     <script>
-        const API_URL = 'http://localhost:3001/api';
+        // Inisialisasi Ikon Lucide
+        lucide.createIcons();
+
+        // Menggunakan Hostname dinamis agar menyesuaikan dengan IP Server
+        const API_URL = `http://${window.location.hostname}:3001/api`;
+
+        function updateTerminal(data, isSuccess) {
+            const outputElem = document.getElementById('output');
+            const statusElem = document.getElementById('response-status');
+
+            outputElem.innerText = JSON.stringify(data, null, 2);
+
+            if (isSuccess) {
+                statusElem.className = 'response-status success';
+                statusElem.innerText = 'HTTP 200 OK';
+            } else {
+                statusElem.className = 'response-status error';
+                statusElem.innerText = 'HTTP ERROR';
+            }
+        }
 
         async function register() {
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
 
-            const res = await fetch(`${API_URL}/register`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
-            });
-            const data = await res.json();
-            document.getElementById('output').innerText = JSON.stringify(data, null, 2);
+            try {
+                const res = await fetch(`${API_URL}/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+                updateTerminal(data, res.ok);
+            } catch (err) {
+                updateTerminal({ error: "Gagal terhubung ke Auth Node (Port 3001)" }, false);
+            }
         }
 
         async function login() {
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
 
-            const res = await fetch(`${API_URL}/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
-            });
-            const data = await res.json();
-            document.getElementById('output').innerText = JSON.stringify(data, null, 2);
+            try {
+                const res = await fetch(`${API_URL}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+                updateTerminal(data, res.ok);
 
-            if (data.token) {
-                // Simpan token ke browser
-                localStorage.setItem('token', data.token);
+                if (data.token) {
+                    localStorage.setItem('token', data.token);
+                }
+            } catch (err) {
+                updateTerminal({ error: "Gagal terhubung ke Auth Node (Port 3001)" }, false);
             }
         }
     </script>
