@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Auth Service - User 1</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; max-width: 400px; }
+        input, button { width: 100%; padding: 10px; margin: 8px 0; box-sizing: border-box; }
+        button { background-color: #4CAF50; color: white; border: none; cursor: pointer; }
+        .box { border: 1px solid #ccc; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <h2>Portal Login & Register</h2>
+
+    <div class="box">
+        <h3>Form Akun</h3>
+        <input type="text" id="username" placeholder="Username">
+        <input type="password" id="password" placeholder="Password">
+        <button onclick="register()">Register</button>
+        <button onclick="login()" style="background-color: #008CBA;">Login</button>
+    </div>
+
+    <div class="box">
+        <h3>Hasil Response:</h3>
+        <pre id="output">Belum ada aktivitas...</pre>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3001/api';
+
+        async function register() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            const res = await fetch(`${API_URL}/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+            const data = await res.json();
+            document.getElementById('output').innerText = JSON.stringify(data, null, 2);
+        }
+
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            const res = await fetch(`${API_URL}/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+            const data = await res.json();
+            document.getElementById('output').innerText = JSON.stringify(data, null, 2);
+
+            if (data.token) {
+                // Simpan token ke browser
+                localStorage.setItem('token', data.token);
+            }
+        }
+    </script>
+</body>
+</html>
