@@ -2,72 +2,401 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Personal Chat (Anggota 2)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Chat (Anggota 2) - Campus Chat App</title>
+    <!-- Google Fonts & Lucide Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
     <!-- Memanggil library socket.io dari CDN -->
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        :root {
+            --primary: #1e3a8a;
+            --primary-hover: #1e40af;
+            --accent: #3b82f6;
+            --bg-main: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --success: #10b981;
+            --error: #ef4444;
+            --chat-bg: #090d16;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+            background: radial-gradient(circle at top left, #1e1b4b, #0f172a);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 24px;
+        }
+
+        /* Top Bar Info Node */
+        .node-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid var(--border);
+            backdrop-filter: blur(8px);
+            padding: 8px 16px;
+            border-radius: 99px;
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 24px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--success);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        /* Main Container */
+        .auth-card {
+            width: 100%;
+            max-width: 460px;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+        }
+
+        .brand-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .brand-icon {
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, #10b981, #059669); /* Warna hijau untuk chat */
+            border-radius: 14px;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            margin-bottom: 16px;
+            box-shadow: 0 8px 16px rgba(16, 185, 129, 0.3);
+        }
+
+        .brand-header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 6px;
+        }
+
+        .brand-header p {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        /* Input Styles */
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-wrapper i {
+            position: absolute;
+            left: 14px;
+            color: var(--text-muted);
+            width: 18px;
+            height: 18px;
+        }
+
+        .input-wrapper input {
+            width: 100%;
+            padding: 12px 14px 12px 42px;
+            background-color: #0f172a;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text-main);
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .input-wrapper input:focus {
+            border-color: var(--success);
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #059669, #047857);
+            transform: translateY(-1px);
+        }
+
+        /* Chat Layout Section */
+        .chat-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .terminal-section {
+            margin-top: 32px;
+            border-top: 1px solid var(--border);
+            padding-top: 20px;
+        }
+
+        .terminal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .terminal-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-muted);
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        #kotakMasuk {
+            background-color: var(--chat-bg);
+            border: 1px solid var(--border);
+            padding: 14px;
+            border-radius: 10px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 13px;
+            height: 200px;
+            overflow-y: auto;
+            list-style: none;
+        }
+
+        .chat-message {
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed var(--border);
+            word-wrap: break-word;
+        }
+
+        .chat-sender {
+            color: #38bdf8;
+            font-weight: bold;
+        }
+
+        .footer-text {
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 24px;
+        }
+    </style>
 </head>
 <body>
-    <h2>Uji Coba Personal Chat (IPI)</h2>
-    
-    <div>
-        <label>Nama Kamu:</label>
-        <input type="text" id="namaSaya" placeholder="">
-        <button onclick="masukJaringan()">Masuk Jaringan</button>
+
+    <!-- Distributed Node Header -->
+    <div class="node-badge">
+        <span class="status-dot"></span>
+        <span>Distributed Node #2 — <strong>Personal Chat (Port 3002)</strong></span>
     </div>
 
-    <hr>
+    <!-- Section 1: Form Masuk Jaringan -->
+    <div class="auth-card" id="formLoginChat">
+        <div class="brand-header">
+            <div class="brand-icon">
+                <i data-lucide="message-square"></i>
+            </div>
+            <h1>Personal Chat</h1>
+            <p>Sistem Terdistribusi — Hubungkan Socket</p>
+        </div>
 
-    <div id="areaChat" style="display:none;">
-        <label>Kirim Pesan Ke (Nama Teman):</label>
-        <input type="text" id="namaTeman" placeholder="Misal: Andi">
-        <br><br>
-        <input type="text" id="isiPesan" placeholder="Tulis pesan...">
-        <button onclick="kirimPesan()">Kirim</button>
+        <div class="input-group">
+            <label for="namaSaya">Identitas Klien (Nama Kamu)</label>
+            <div class="input-wrapper">
+                <i data-lucide="user"></i>
+                <input type="text" id="namaSaya" placeholder="Masukkan nama kamu">
+            </div>
+        </div>
 
-        <h3>Kotak Masuk:</h3>
-        <ul id="kotakMasuk"></ul>
+        <button class="btn btn-primary" onclick="masukJaringan()">
+            <i data-lucide="radio" style="width:16px;"></i> Hubungkan ke Server
+        </button>
+    </div>
+
+    <!-- Section 2: Area Chatting (Awalnya Disembunyikan) -->
+    <div class="auth-card" id="areaChat" style="display:none; max-width: 550px;">
+        <div class="brand-header" style="margin-bottom: 24px;">
+            <h2 style="font-size: 18px; color: var(--success); display:flex; justify-content:center; align-items:center; gap:8px;">
+                <i data-lucide="wifi"></i> Terhubung
+            </h2>
+            <p id="statusUser" style="font-size: 13px; margin-top: 4px;"></p>
+        </div>
+
+        <div class="chat-grid">
+            <div class="input-group" style="margin-bottom: 0;">
+                <label for="namaTeman">Penerima</label>
+                <div class="input-wrapper">
+                    <i data-lucide="at-sign"></i>
+                    <input type="text" id="namaTeman" placeholder="Nama target">
+                </div>
+            </div>
+            <div class="input-group" style="margin-bottom: 0;">
+                <label for="isiPesan">Isi Pesan</label>
+                <div class="input-wrapper">
+                    <i data-lucide="send"></i>
+                    <input type="text" id="isiPesan" placeholder="Ketik pesan...">
+                </div>
+            </div>
+        </div>
+
+        <button class="btn btn-primary" onclick="kirimPesan()">
+            Kirim Pesan <i data-lucide="arrow-right" style="width:16px;"></i>
+        </button>
+
+        <!-- Kotak Masuk / Terminal Log -->
+        <div class="terminal-section">
+            <div class="terminal-header">
+                <span class="terminal-title">
+                    <i data-lucide="inbox" style="width:14px;"></i> Kotak Masuk (Real-time)
+                </span>
+            </div>
+            <ul id="kotakMasuk">
+                <li style="color: var(--text-muted); font-style: italic; font-size: 12px; border:none;">[Sistem] Menunggu pesan masuk...</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="footer-text">
+        Project Sistem Terdistribusi Kelompok • 2026
     </div>
 
     <script>
+        // Inisialisasi Ikon Lucide
+        lucide.createIcons();
+
         // Ganti 'localhost' dengan IP laptopmu nanti jika dites dengan teman sekelompok
-        const socket = io("http://localhost:3002"); 
+        const socket = io(`http://${window.location.hostname}:3002`); 
         let namaSaya = "";
 
+        // Fungsi saat tombol Masuk Jaringan ditekan
         function masukJaringan() {
             namaSaya = document.getElementById("namaSaya").value;
             if(namaSaya) {
-                // Mengirim event "register_user" ke server backend-mu
+                // Mengirim event ke server
                 socket.emit("register_user", namaSaya);
+                
+                // Animasi perpindahan antar muka (UI)
+                document.getElementById("formLoginChat").style.display = "none";
                 document.getElementById("areaChat").style.display = "block";
-                alert(namaSaya + " berhasil terhubung ke server chat!");
+                document.getElementById("statusUser").innerText = `Login sebagai: ${namaSaya}`;
             }
         }
 
+        // Fungsi saat tombol Kirim ditekan
         function kirimPesan() {
             const namaTeman = document.getElementById("namaTeman").value;
             const pesan = document.getElementById("isiPesan").value;
 
-            // Mengirim event "private_message" ke server backend-mu
+            if(!namaTeman || !pesan) return;
+
+            // Mengirim pesan private ke server
             socket.emit("private_message", {
                 pengirim: namaSaya,
                 penerima: namaTeman,
                 pesan: pesan
             });
 
-            document.getElementById("isiPesan").value = ""; // Kosongkan kolom input
+            // Menambahkan pesan ke layar sendiri (Opsional, agar terlihat riwayat yang dikirim)
+            tambahPesanKeLayar("Kamu", pesan, true);
+            
+            // Kosongkan kolom input pesan
+            document.getElementById("isiPesan").value = ""; 
         }
 
-        // Menerima event "terima_pesan" dari server backend-mu
-        socket.on("terima_pesan", (data) => {
+        // Fungsi bantuan untuk merender list HTML
+        function tambahPesanKeLayar(pengirim, pesan, isSelf = false) {
             const listPesan = document.getElementById("kotakMasuk");
             const li = document.createElement("li");
-            li.innerHTML = `<b>${data.pengirim}:</b> ${data.pesan}`;
+            li.className = "chat-message";
+            
+            const color = isSelf ? "var(--success)" : "#38bdf8";
+            
+            li.innerHTML = `<span style="color: ${color}; font-weight:bold;">[${pengirim}]</span>: ${pesan}`;
+            
+            // Hapus teks "menunggu pesan" jika itu pesan pertama
+            if(listPesan.children[0].innerText.includes("[Sistem]")) {
+                listPesan.innerHTML = "";
+            }
+            
             listPesan.appendChild(li);
+            // Auto scroll ke bawah
+            listPesan.scrollTop = listPesan.scrollHeight;
+        }
+
+        // Event: Menerima pesan dari server
+        socket.on("terima_pesan", (data) => {
+            tambahPesanKeLayar(data.pengirim, data.pesan, false);
         });
 
-        // Menampilkan pesan error jika teman offline
+        // Event: Error jika target tidak ada/offline
         socket.on("error_message", (pesanError) => {
-            alert(pesanError);
+            alert("Sistem Peringatan: " + pesanError);
         });
     </script>
 </body>
