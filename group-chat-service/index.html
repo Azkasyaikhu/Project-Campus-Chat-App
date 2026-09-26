@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Group Chat - Tugas IPI Umam</title>
+    <!-- Memanggil library Socket.io klien dari servermu -->
+    <script src="http://localhost:3003/socket.io/socket.io.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 20px auto; padding: 20px; background-color: #f4f7f6; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        input, select, button { padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        button { background-color: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; }
+        button:hover { background-color: #0056b3; }
+        #chat-box { height: 300px; border: 1px solid #ddd; overflow-y: auto; padding: 10px; margin-bottom: 10px; background-color: #fafafa; border-radius: 4px; }
+        .msg { margin-bottom: 8px; padding: 5px 10px; border-radius: 4px; width: fit-content; max-width: 80%; }
+        .msg.system { color: #888; font-style: italic; font-size: 0.9em; margin: 5px auto; background: none; }
+        .msg.me { background-color: #d1ecf1; color: #0c5460; margin-left: auto; border-bottom-right-radius: 0; }
+        .msg.other { background-color: #e2e3e5; color: #383d41; margin-right: auto; border-bottom-left-radius: 0; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2 style="text-align: center; color: #333;">Ruang Diskusi Kuliah</h2>
+        
+        <!-- Bagian Login/Join Room -->
+        <div id="join-section">
+            <label>Nama Kamu:</label>
+            <input type="text" id="username" placeholder="Masukkan nama (Misal: Umam)">
+            
+            <label>Pilih Ruang Obrolan:</label>
+            <select id="room">
+                <option value="Sistem Terdistribusi">Sistem Terdistribusi</option>
+                <option value="Jaringan Komputer">Jaringan Komputer</option>
+                <option value="Pemrograman Web">Pemrograman Web</option>
+            </select>
+            
+            <button onclick="joinRoom()">Gabung Ruangan</button>
+        </div>
+
+        <!-- Bagian Chatting (Awalnya Disembunyikan) -->
+        <div id="chat-section" style="display:none;">
+            <h3 id="room-title" style="color: #007bff; border-bottom: 2px solid #007bff; padding-bottom: 5px;"></h3>
+            <div id="chat-box"></div>
+            <div style="display: flex; gap: 10px;">
+                <input type="text" id="message" placeholder="Ketik pesan di sini..." style="flex: 1;">
+                <button onclick="sendMessage()" style="width: 80px;">Kirim</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Mengkoneksikan Frontend ke Backend (IPI Socket)
+        const socket = io('http://localhost:3003'); 
+        
+        let currentRoom = '';
+        let currentUsername = '';
+
+        function joinRoom() {
+            currentUsername = document.getElementById('username').value;
+            currentRoom = document.getElementById('room').value;
+            
+            if(!currentUsername) return alert("Nama tidak boleh kosong!");
+
+            // Mengirim event IPI 'join_room' ke server
+            socket.emit('join_room', currentRoom);
+            
+            // Ubah tampilan UI
+            document.getElementById('join-section').style.display = 'none';
+            document.getElementById('chat-section').style.display = 'block';
+            document.getElementById('room-title').innerText = `Ruang: ${currentRoom}`;
+        }
+
+        function sendMessage() {
+            const messageInput = document.getElementById('message');
+            const message = messageInput.value;
+            if(!message) return;
+
+            const data = {
+                room: currentRoom,
+                sender: currentUsername,
+                message: message
+            };
+
+            // Mengirim event IPI pesan ke server
+            socket.emit('send_group_message', data);
+            
+            displayMessage(`Kamu: ${message}`, 'me');
+            messageInput.value = ''; 
+        }
+
+        // Menerima pesan dari orang lain
+        socket.on('receive_group_message', (data) => {
+            displayMessage(`${data.sender}: ${data.message}`, 'other');
+        });
+
+        // Menerima notifikasi sistem (ada orang baru masuk)
+        socket.on('system_notification', (msg) => {
+            displayMessage(msg, 'system');
+        });
+
+        // Fungsi UI untuk mencetak elemen teks ke layar
+        function displayMessage(text, type) {
+            const chatBox = document.getElementById('chat-box');
+            const div = document.createElement('div');
+            div.className = `msg ${type}`;
+            div.innerText = text;
+            chatBox.appendChild(div);
+            chatBox.scrollTop = chatBox.scrollHeight; 
+        }
+    </script>
+</body>
+</html>
