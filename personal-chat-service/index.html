@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Personal Chat (Anggota 2)</title>
+    <!-- Memanggil library socket.io dari CDN -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+</head>
+<body>
+    <h2>Uji Coba Personal Chat (IPI)</h2>
+    
+    <div>
+        <label>Nama Kamu:</label>
+        <input type="text" id="namaSaya" placeholder="">
+        <button onclick="masukJaringan()">Masuk Jaringan</button>
+    </div>
+
+    <hr>
+
+    <div id="areaChat" style="display:none;">
+        <label>Kirim Pesan Ke (Nama Teman):</label>
+        <input type="text" id="namaTeman" placeholder="Misal: Andi">
+        <br><br>
+        <input type="text" id="isiPesan" placeholder="Tulis pesan...">
+        <button onclick="kirimPesan()">Kirim</button>
+
+        <h3>Kotak Masuk:</h3>
+        <ul id="kotakMasuk"></ul>
+    </div>
+
+    <script>
+        // Ganti 'localhost' dengan IP laptopmu nanti jika dites dengan teman sekelompok
+        const socket = io("http://localhost:3002"); 
+        let namaSaya = "";
+
+        function masukJaringan() {
+            namaSaya = document.getElementById("namaSaya").value;
+            if(namaSaya) {
+                // Mengirim event "register_user" ke server backend-mu
+                socket.emit("register_user", namaSaya);
+                document.getElementById("areaChat").style.display = "block";
+                alert(namaSaya + " berhasil terhubung ke server chat!");
+            }
+        }
+
+        function kirimPesan() {
+            const namaTeman = document.getElementById("namaTeman").value;
+            const pesan = document.getElementById("isiPesan").value;
+
+            // Mengirim event "private_message" ke server backend-mu
+            socket.emit("private_message", {
+                pengirim: namaSaya,
+                penerima: namaTeman,
+                pesan: pesan
+            });
+
+            document.getElementById("isiPesan").value = ""; // Kosongkan kolom input
+        }
+
+        // Menerima event "terima_pesan" dari server backend-mu
+        socket.on("terima_pesan", (data) => {
+            const listPesan = document.getElementById("kotakMasuk");
+            const li = document.createElement("li");
+            li.innerHTML = `<b>${data.pengirim}:</b> ${data.pesan}`;
+            listPesan.appendChild(li);
+        });
+
+        // Menampilkan pesan error jika teman offline
+        socket.on("error_message", (pesanError) => {
+            alert(pesanError);
+        });
+    </script>
+</body>
+</html>
