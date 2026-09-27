@@ -402,8 +402,17 @@
                 const data = await res.json();
                 updateTerminal(data, res.ok, res.status);
 
+                // [PERBAIKAN DI SINI]: Jika ada token, simpan dan langsung pindah ke port 3003
                 if (data.token) {
                     localStorage.setItem('token', data.token);
+                    
+                    // Tambahkan teks notifikasi pengalihan di terminal UI
+                    document.getElementById('output').innerText += "\n\n// Login Sukses! Mengalihkan ke Ruang Diskusi (Port 3003)...";
+                    
+                    // Pindah otomatis ke Port 3003 setelah jeda 1.5 detik
+                    setTimeout(() => {
+                        window.location.href = `http://${window.location.hostname}:3003`;
+                    }, 1500);
                 }
             } catch (err) {
                 updateTerminal({ 
