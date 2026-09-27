@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -6,11 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Campus Chat App - Group Chat Node</title>
     
-    <!-- Google Fonts & Lucide Icons -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
-    
-    <!-- Memanggil library Socket.io -->
     <script src="/socket.io/socket.io.js"></script>
 
     <style>
@@ -26,227 +22,42 @@
             --success: #10b981;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Plus Jakarta Sans', sans-serif;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { background: radial-gradient(circle at top left, #1e1b4b, #0f172a); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 24px; }
 
-        body {
-            background: radial-gradient(circle at top left, #1e1b4b, #0f172a);
-            color: var(--text-main);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 24px;
-        }
+        .node-badge { display: flex; align-items: center; gap: 8px; background: rgba(30, 41, 59, 0.8); border: 1px solid var(--border); backdrop-filter: blur(8px); padding: 8px 16px; border-radius: 99px; font-size: 12px; color: var(--text-muted); margin-bottom: 24px; }
+        .status-dot { width: 8px; height: 8px; background-color: var(--success); border-radius: 50%; box-shadow: 0 0 8px var(--success); animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
 
-        /* Top Bar Info Node */
-        .node-badge {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: rgba(30, 41, 59, 0.8);
-            border: 1px solid var(--border);
-            backdrop-filter: blur(8px);
-            padding: 8px 16px;
-            border-radius: 99px;
-            font-size: 12px;
-            color: var(--text-muted);
-            margin-bottom: 24px;
-        }
+        .app-card { width: 100%; max-width: 500px; background-color: var(--card-bg); border: 1px solid var(--border); border-radius: 20px; padding: 32px; box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5); }
+        .brand-header { text-align: center; margin-bottom: 24px; }
+        .brand-icon { width: 56px; height: 56px; background: linear-gradient(135deg, #10b981, #059669); border-radius: 14px; display: inline-flex; justify-content: center; align-items: center; color: #fff; margin-bottom: 16px; box-shadow: 0 8px 16px rgba(16, 185, 129, 0.3); }
+        .brand-header h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 6px; }
+        .brand-header p { font-size: 14px; color: var(--text-muted); }
 
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            background-color: var(--success);
-            border-radius: 50%;
-            box-shadow: 0 0 8px var(--success);
-            animation: pulse 2s infinite;
-        }
+        .input-group { margin-bottom: 20px; }
+        .input-group label { display: block; font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; }
+        .input-wrapper { position: relative; display: flex; align-items: center; }
+        .input-wrapper i { position: absolute; left: 14px; color: var(--text-muted); width: 18px; height: 18px; }
+        
+        .input-wrapper input, .input-wrapper select { width: 100%; padding: 12px 14px 12px 42px; background-color: #0f172a; border: 1px solid var(--border); border-radius: 10px; color: var(--text-main); font-size: 14px; outline: none; transition: all 0.2s ease; appearance: none; }
+        .input-wrapper input:focus, .input-wrapper select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); }
 
-        @keyframes pulse {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-            70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-        }
+        /* Custom Add Room Link */
+        .add-room-link { font-size: 12px; color: var(--accent); text-align: right; margin-top: 6px; cursor: pointer; font-weight: 600; }
+        .add-room-link:hover { text-decoration: underline; }
 
-        /* Main Container */
-        .app-card {
-            width: 100%;
-            max-width: 500px;
-            background-color: var(--card-bg);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 32px;
-            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
-        }
+        #chat-box { height: 350px; background-color: #090d16; border: 1px solid var(--border); border-radius: 12px; padding: 16px; overflow-y: auto; margin-bottom: 16px; display: flex; flex-direction: column; gap: 12px; }
+        .msg { padding: 10px 14px; border-radius: 12px; font-size: 13.5px; max-width: 85%; width: fit-content; line-height: 1.5; word-wrap: break-word; }
+        .msg.system { background: none; color: var(--text-muted); font-size: 11px; font-style: italic; align-self: center; padding: 4px; }
+        .msg.me { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+        .msg.other { background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main); align-self: flex-start; border-bottom-left-radius: 4px; }
+        .chat-input-row { display: flex; gap: 10px; }
 
-        .brand-header {
-            text-align: center;
-            margin-bottom: 24px;
-        }
-
-        .brand-icon {
-            width: 56px;
-            height: 56px;
-            background: linear-gradient(135deg, #10b981, #059669); /* Warna hijau untuk membedakan dari Auth */
-            border-radius: 14px;
-            display: inline-flex;
-            justify-content: center;
-            align-items: center;
-            color: #fff;
-            margin-bottom: 16px;
-            box-shadow: 0 8px 16px rgba(16, 185, 129, 0.3);
-        }
-
-        .brand-header h1 {
-            font-size: 24px;
-            font-weight: 700;
-            letter-spacing: -0.5px;
-            margin-bottom: 6px;
-        }
-
-        .brand-header p {
-            font-size: 14px;
-            color: var(--text-muted);
-        }
-
-        /* Input Styles */
-        .input-group {
-            margin-bottom: 20px;
-        }
-
-        .input-group label {
-            display: block;
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--text-muted);
-            margin-bottom: 8px;
-        }
-
-        .input-wrapper {
-            position: relative;
-            display: flex;
-            align-items: center;
-        }
-
-        .input-wrapper i {
-            position: absolute;
-            left: 14px;
-            color: var(--text-muted);
-            width: 18px;
-            height: 18px;
-        }
-
-        .input-wrapper input, .input-wrapper select {
-            width: 100%;
-            padding: 12px 14px 12px 42px;
-            background-color: #0f172a;
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            color: var(--text-main);
-            font-size: 14px;
-            outline: none;
-            transition: all 0.2s ease;
-            appearance: none; /* Menghilangkan panah default select */
-        }
-
-        .input-wrapper input:focus, .input-wrapper select:focus {
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
-        }
-
-        /* Chat Specific Styles */
-        #chat-box {
-            height: 350px;
-            background-color: #090d16;
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 16px;
-            overflow-y: auto;
-            margin-bottom: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .msg {
-            padding: 10px 14px;
-            border-radius: 12px;
-            font-size: 13.5px;
-            max-width: 85%;
-            width: fit-content;
-            line-height: 1.5;
-            word-wrap: break-word;
-        }
-
-        .msg.system {
-            background: none;
-            color: var(--text-muted);
-            font-size: 11px;
-            font-style: italic;
-            align-self: center;
-            padding: 4px;
-        }
-
-        .msg.me {
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
-            color: white;
-            align-self: flex-end;
-            border-bottom-right-radius: 4px;
-        }
-
-        .msg.other {
-            background: var(--card-bg);
-            border: 1px solid var(--border);
-            color: var(--text-main);
-            align-self: flex-start;
-            border-bottom-left-radius: 4px;
-        }
-
-        .chat-input-row {
-            display: flex;
-            gap: 10px;
-        }
-
-        .btn-primary {
-            display: inline-flex;
-            justify-content: center;
-            align-items: center;
-            gap: 8px;
-            padding: 12px;
-            border-radius: 10px;
-            font-size: 14px;
-            font-weight: 600;
-            border: none;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
-            color: #ffffff;
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
-            width: 100%;
-        }
-
-        .btn-primary:hover {
-            background: linear-gradient(135deg, #1d4ed8, #1e40af);
-            transform: translateY(-1px);
-        }
-
-        .btn-icon {
-            width: auto;
-            padding: 12px 16px;
-        }
-
-        .footer-text {
-            text-align: center;
-            font-size: 12px;
-            color: var(--text-muted);
-            margin-top: 24px;
-        }
+        .btn-primary { display: inline-flex; justify-content: center; align-items: center; gap: 8px; padding: 12px; border-radius: 10px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; transition: all 0.2s ease; background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #ffffff; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25); width: 100%; }
+        .btn-primary:hover { background: linear-gradient(135deg, #1d4ed8, #1e40af); transform: translateY(-1px); }
+        .btn-icon { width: auto; padding: 12px 16px; }
+        .footer-text { text-align: center; font-size: 12px; color: var(--text-muted); margin-top: 24px; }
     </style>
 </head>
 <body>
@@ -258,22 +69,12 @@
     </div>
 
     <div class="app-card">
-        <!-- Bagian Join Room -->
+        <!-- Bagian Join Room (Username Dihapus) -->
         <div id="join-section">
             <div class="brand-header">
-                <div class="brand-icon">
-                    <i data-lucide="users"></i>
-                </div>
+                <div class="brand-icon"><i data-lucide="users"></i></div>
                 <h1>Ruang Diskusi</h1>
-                <p>Sistem Terdistribusi — Layanan Chat Grup</p>
-            </div>
-
-            <div class="input-group">
-                <label for="username">Nama Pengguna</label>
-                <div class="input-wrapper">
-                    <i data-lucide="user"></i>
-                    <input type="text" id="username" placeholder="Masukkan nama panggilanmu">
-                </div>
+                <p id="greeting">Sistem Terdistribusi — Memverifikasi Kredensial...</p>
             </div>
 
             <div class="input-group">
@@ -281,11 +82,10 @@
                 <div class="input-wrapper">
                     <i data-lucide="layout-grid"></i>
                     <select id="room">
-                        <option value="Sistem Terdistribusi">Sistem Terdistribusi</option>
-                        <option value="Jaringan Komputer">Jaringan Komputer</option>
-                        <option value="Pemrograman Web">Pemrograman Web</option>
+                        <option value="">-- Memuat Kelas dari Database --</option>
                     </select>
                 </div>
+                <div class="add-room-link" onclick="buatKelasBaru()">+ Buat Kelas Baru</div>
             </div>
 
             <button class="btn-primary" onclick="joinRoom()" style="margin-top: 8px;">
@@ -295,14 +95,17 @@
 
         <!-- Bagian Chat Room (Disembunyikan saat awal) -->
         <div id="chat-section" style="display:none;">
-            <div class="brand-header" style="margin-bottom: 16px; text-align: left; display: flex; align-items: center; gap: 12px;">
-                <div class="brand-icon" style="width: 40px; height: 40px; margin: 0; border-radius: 10px;">
-                    <i data-lucide="message-square" style="width: 20px;"></i>
+            <div class="brand-header" style="margin-bottom: 16px; text-align: left; display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div class="brand-icon" style="width: 40px; height: 40px; margin: 0; border-radius: 10px;">
+                        <i data-lucide="message-square" style="width: 20px;"></i>
+                    </div>
+                    <div>
+                        <h1 id="room-title" style="font-size: 16px; margin-bottom: 2px;">Nama Ruangan</h1>
+                        <p style="font-size: 12px;" id="login-as-text">Login sebagai: -</p>
+                    </div>
                 </div>
-                <div>
-                    <h1 id="room-title" style="font-size: 16px; margin-bottom: 2px;">Nama Ruangan</h1>
-                    <p style="font-size: 12px;">Sedang Online</p>
-                </div>
+                <button onclick="location.reload()" style="background:transparent; border:1px solid #334155; color:#94a3b8; padding: 6px 12px; border-radius:8px; cursor:pointer; font-size:12px;">Keluar</button>
             </div>
 
             <div id="chat-box"></div>
@@ -324,26 +127,93 @@
     </div>
 
     <script>
-        // Inisialisasi ikon UI
         lucide.createIcons();
 
-        // [PENTING] Menyesuaikan IP secara otomatis sama seperti trik di file Auth temanmu
-        const socket = io(`http://${window.location.hostname}:3003`); 
-        
+        // 1. CEK TOKEN JWT & AMBIL USERNAME OTOMATIS
+        const token = localStorage.getItem('token');
+        if (!token) {
+            alert("Akses Ditolak! Anda belum login.\nSilakan login di Layanan Auth.");
+            window.location.href = `http://${window.location.hostname}:3001`;
+        }
+
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const currentUsername = payload.username;
+        document.getElementById('greeting').innerText = `Selamat datang, ${currentUsername}!`;
+        document.getElementById('login-as-text').innerText = `Login sebagai: ${currentUsername}`;
+
+        // 2. FETCH DAFTAR KELAS DARI MONGODB
+        async function loadRooms() {
+            try {
+                const res = await fetch(`http://${window.location.hostname}:3003/api/rooms`);
+                const rooms = await res.json();
+                const select = document.getElementById('room');
+                select.innerHTML = '';
+                rooms.forEach(r => {
+                    select.innerHTML += `<option value="${r.name}">${r.name}</option>`;
+                });
+            } catch (err) {
+                console.error("Gagal memuat daftar kelas", err);
+            }
+        }
+        loadRooms();
+
+        // 3. FITUR BUAT KELAS
+        async function buatKelasBaru() {
+            const newRoom = prompt("Masukkan nama Ruang Kelas baru:");
+            if (newRoom) {
+                await fetch(`http://${window.location.hostname}:3003/api/rooms`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ roomName: newRoom })
+                });
+                loadRooms(); // Refresh dropdown
+                alert("Kelas baru berhasil dibuat!");
+            }
+        }
+
+        // 4. LOGIKA SOCKET.IO
+        let socket;
         let currentRoom = '';
-        let currentUsername = '';
 
         function joinRoom() {
-            currentUsername = document.getElementById('username').value.trim();
             currentRoom = document.getElementById('room').value;
-            
-            if(!currentUsername) return alert("Silakan isi nama pengguna terlebih dahulu!");
+            if(!currentRoom) return alert("Pilih kelas terlebih dahulu!");
+
+            // Connect dengan mengirim Token Auth
+            socket = io(`http://${window.location.hostname}:3003`, {
+                auth: { token: token }
+            });
+
+            socket.on("connect_error", (err) => {
+                alert("Sesi kadaluarsa. Silakan login kembali!");
+                window.location.href = `http://${window.location.hostname}:3001`;
+            });
 
             socket.emit('join_room', currentRoom);
             
             document.getElementById('join-section').style.display = 'none';
             document.getElementById('chat-section').style.display = 'block';
             document.getElementById('room-title').innerText = `Ruang: ${currentRoom}`;
+
+            // Load Chat History dari Database
+            socket.on('load_group_history', (history) => {
+                document.getElementById('chat-box').innerHTML = ''; // Clear loading
+                history.forEach(msg => {
+                    if (msg.sender === currentUsername) {
+                        displayMessage(msg.message, 'me');
+                    } else {
+                        displayMessage(`<b>${msg.sender}:</b><br>${msg.message}`, 'other');
+                    }
+                });
+            });
+
+            socket.on('receive_group_message', (data) => {
+                displayMessage(`<b>${data.sender}:</b><br>${data.message}`, 'other');
+            });
+
+            socket.on('system_notification', (msg) => {
+                displayMessage(msg, 'system');
+            });
         }
 
         function handleEnter(e) {
@@ -357,28 +227,19 @@
 
             const data = {
                 room: currentRoom,
-                sender: currentUsername,
                 message: message
             };
 
             socket.emit('send_group_message', data);
-            displayMessage(message, 'me');
+            displayMessage(message, 'me'); // Munculkan ke layar sendiri
             messageInput.value = ''; 
         }
-
-        socket.on('receive_group_message', (data) => {
-            displayMessage(`<b>${data.sender}:</b><br>${data.message}`, 'other');
-        });
-
-        socket.on('system_notification', (msg) => {
-            displayMessage(msg, 'system');
-        });
 
         function displayMessage(text, type) {
             const chatBox = document.getElementById('chat-box');
             const div = document.createElement('div');
             div.className = `msg ${type}`;
-            div.innerHTML = text; // Menggunakan innerHTML agar tag <br> dan <b> terbaca
+            div.innerHTML = text; 
             chatBox.appendChild(div);
             chatBox.scrollTop = chatBox.scrollHeight; 
         }
