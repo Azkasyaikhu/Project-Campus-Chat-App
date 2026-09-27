@@ -121,7 +121,7 @@ app.get('/api/notifications', async (req, res) => {
 const PORT = process.env.PORT || 3004;
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`=================================`);
-    console.log(` Notification Service (User 4) Running!`);
+    console.log(`🚀 Notification Service (User 4) Running!`);
     console.log(`Port: ${PORT}`);
     console.log(`Akses Lokal : http://localhost:${PORT}`);
     console.log(`=================================`);
