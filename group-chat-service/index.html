@@ -129,41 +129,41 @@
     <script>
         lucide.createIcons();
 
-        // 1. TANGKAP TOKEN DARI URL & CEK OTORISASI
-        // Cek apakah ada token yang dilempar dari URL (dari Port 3001)
+        // 1. DEKLARASI VARIABEL GLOBAL (Ini kunci perbaikannya!)
+        let socket;
+        let currentRoom = '';
+        let currentUsername = ''; // Dideklarasikan di luar agar terbaca oleh semua fungsi
+
+        // 2. TANGKAP TOKEN DARI URL & CEK OTORISASI
         const urlParams = new URLSearchParams(window.location.search);
         const tokenFromUrl = urlParams.get('token');
         
         if (tokenFromUrl) {
-            // Jika ada, simpan ke localStorage Port 3003
             localStorage.setItem('token', tokenFromUrl);
-            // Bersihkan URL agar token tidak terlihat panjang di address bar
             window.history.replaceState({}, document.title, window.location.pathname);
         }
 
-        // Cek token di localStorage
         const token = localStorage.getItem('token');
         
         if (!token) {
             alert("Akses Ditolak! Anda belum login.\nSilakan login di Layanan Auth.");
             window.location.href = `http://${window.location.hostname}:3001`;
         } else {
-            // Decode token untuk mendapatkan username
+            // Isi variabel global currentUsername
             const payload = JSON.parse(atob(token.split('.')[1]));
-            const currentUsername = payload.username;
+            currentUsername = payload.username;
             
             document.getElementById('greeting').innerText = `Selamat datang, ${currentUsername}!`;
             document.getElementById('login-as-text').innerText = `Login sebagai: ${currentUsername}`;
         }
 
-        // ... LANJUTKAN KODE FETCH DAFTAR KELAS (loadRooms) SEPERTI BIASA DI BAWAH INI ...
-        // 2. FETCH DAFTAR KELAS DARI MONGODB
+        // 3. FETCH DAFTAR KELAS DARI MONGODB
         async function loadRooms() {
             try {
                 const res = await fetch(`http://${window.location.hostname}:3003/api/rooms`);
                 const rooms = await res.json();
                 const select = document.getElementById('room');
-                select.innerHTML = '';
+                select.innerHTML = '<option value="">-- Pilih Kelas --</option>';
                 rooms.forEach(r => {
                     select.innerHTML += `<option value="${r.name}">${r.name}</option>`;
                 });
@@ -173,7 +173,7 @@
         }
         loadRooms();
 
-        // 3. FITUR BUAT KELAS
+        // 4. FITUR BUAT KELAS
         async function buatKelasBaru() {
             const newRoom = prompt("Masukkan nama Ruang Kelas baru:");
             if (newRoom) {
@@ -187,10 +187,7 @@
             }
         }
 
-        // 4. LOGIKA SOCKET.IO
-        let socket;
-        let currentRoom = '';
-
+        // 5. LOGIKA SOCKET.IO (GABUNG & MUAT HISTORY)
         function joinRoom() {
             currentRoom = document.getElementById('room').value;
             if(!currentRoom) return alert("Pilih kelas terlebih dahulu!");
@@ -213,8 +210,9 @@
 
             // Load Chat History dari Database
             socket.on('load_group_history', (history) => {
-                document.getElementById('chat-box').innerHTML = ''; // Clear loading
+                document.getElementById('chat-box').innerHTML = ''; // Bersihkan layar
                 history.forEach(msg => {
+                    // Berkat variabel global, sistem kini tahu mana pesanmu dan mana pesan orang lain
                     if (msg.sender === currentUsername) {
                         displayMessage(msg.message, 'me');
                     } else {
@@ -247,7 +245,7 @@
             };
 
             socket.emit('send_group_message', data);
-            displayMessage(message, 'me'); // Munculkan ke layar sendiri
+            displayMessage(message, 'me'); 
             messageInput.value = ''; 
         }
 
