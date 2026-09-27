@@ -8,6 +8,14 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// ==========================================
+// MENYAJIKAN FILE HTML SECARA OTOMATIS
+// ==========================================
+app.use(express.static('.'));
+app.get('/', (req, res) => {
+    res.sendFile(__dirname + '/index.html');
+});
+
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
@@ -56,7 +64,7 @@ io.on('connection', (socket) => {
                     { pengirim: pengirim, penerima: penerima },
                     { pengirim: penerima, penerima: pengirim }
                 ]
-            }).sort({ waktu: 1 }); // Urutkan dari yang terlama ke terbaru
+            }).sort({ waktu: 1 });
 
             socket.emit('load_chat_history', history);
         } catch (error) {
@@ -69,17 +77,16 @@ io.on('connection', (socket) => {
         const { pengirim, penerima, pesan } = data;
 
         try {
-            // Simpan pesan ke MongoDB Atlas agar tidak hilang
+            // Simpan pesan ke MongoDB Atlas
             const pesanBaru = new Message({ pengirim, penerima, pesan });
             await pesanBaru.save();
 
-            // Kirim konfirmasi ke pengirim bahwa pesan berhasil disimpan & dirender
+            // Kirim konfirmasi ke pengirim
             socket.emit('pesan_terkirim', { pengirim, penerima, pesan });
 
             // Cek apakah penerima sedang online
             const socketIdPenerima = penggunaOnline[penerima];
             if (socketIdPenerima) {
-                // Kirim pesan secara instan ke layar penerima tanpa refresh
                 io.to(socketIdPenerima).emit('terima_pesan', { pengirim, penerima, pesan });
                 console.log(`📤 Pesan dari ${pengirim} dikirim real-time ke ${penerima}`);
             } else {
