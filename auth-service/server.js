@@ -2,24 +2,39 @@ const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const mongoose = require('mongoose');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const JWT_SECRET = 'kunci_rahasia_kelompok_kami';
+const JWT_SECRET = 'kunci_rahasia_campus_chat_2026';
 
 // Middleware
-app.use(express.static('.')); // Menyajikan file html secara gratis
-app.use(cors()); // Mengizinkan akses dari IP laptop lain
+app.use(express.static('.')); // Menyajikan file index.html di browser
+app.use(cors());
 app.use(express.json());
 
-// Database Sementara (In-Memory Array) agar mudah dicoba pemula
-const users = [];
+// ==========================================
+// KONEKSI MONGODB ATLAS CLOUD
+// ==========================================
+const MONGO_URI = "mongodb+srv://azkasyaikhu0917_db_user:aK5LAb4MHvy6mEpF@cluster0.v8j6a5q.mongodb.net/campus_chat?appName=Cluster0";
+
+mongoose.connect(MONGO_URI)
+    .then(() => console.log('✅ MongoDB Atlas Cloud Terhubung Berhasil!'))
+    .catch(err => console.error('❌ Gagal Konek MongoDB:', err));
+
+// Schema & Model User untuk MongoDB
+const userSchema = new mongoose.Schema({
+    username: { type: String, required: true, unique: true },
+    password: { type: String, required: true }
+});
+
+const User = mongoose.model('User', userSchema);
 
 // ==========================================
 // ENDPOINT REST API
 // ==========================================
 
-// 1. Endpoint Pendaftaran (Register)
+// 1. Endpoint Register (Simpan ke MongoDB Atlas)
 app.post('/api/register', async (req, res) => {
     try {
         const { username, password } = req.body;
@@ -28,19 +43,23 @@ app.post('/api/register', async (req, res) => {
             return res.status(400).json({ message: 'Username dan password wajib diisi!' });
         }
 
-        // Cek apakah user sudah ada
-        const existingUser = users.find(u => u.username === username);
+        // Cek apakah user sudah ada di database
+        const existingUser = await User.findOne({ username });
         if (existingUser) {
             return res.status(400).json({ message: 'Username sudah digunakan!' });
         }
 
-        // Enkripsi password
+        // Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
         
-        const newUser = { id: users.length + 1, username, password: hashedPassword };
-        users.push(newUser);
-
-        res.status(201).json({ message: 'Register berhasil!', user: { id: newUser.id, username: newUser.username } });
+        // Simpan ke MongoDB Atlas
+        const newUser = new User({ username, password: hashedPassword });
+        await newUser.save();
+        
+        res.status(201).json({ 
+            message: 'Register berhasil!', 
+            user: { id: newUser._id, username: newUser.username } 
+        });
     } catch (error) {
         res.status(500).json({ message: 'Terjadi kesalahan server.' });
     }
@@ -51,7 +70,7 @@ app.post('/api/login', async (req, res) => {
     try {
         const { username, password } = req.body;
 
-        const user = users.find(u => u.username === username);
+        const user = await User.findOne({ username });
         if (!user) {
             return res.status(400).json({ message: 'Username atau password salah!' });
         }
@@ -62,19 +81,19 @@ app.post('/api/login', async (req, res) => {
         }
 
         // Buat JWT Token
-        const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '1h' });
+        const token = jwt.sign({ id: user._id, username: user.username }, JWT_SECRET, { expiresIn: '12h' });
 
         res.json({
             message: 'Login berhasil!',
             token: token,
-            user: { id: user.id, username: user.username }
+            user: { id: user._id, username: user.username }
         });
     } catch (error) {
         res.status(500).json({ message: 'Terjadi kesalahan server.' });
     }
 });
 
-// 3. Endpoint Verifikasi Token (Untuk dipanggil oleh User 2, 3, dan 4)
+// 3. Endpoint Verifikasi Token (Untuk Service Lain)
 app.post('/api/verify-token', (req, res) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -88,9 +107,14 @@ app.post('/api/verify-token', (req, res) => {
 });
 
 // 4. Endpoint Ambil Semua User Terdaftar
-app.get('/api/users', (req, res) => {
-    const userList = users.map(u => ({ id: u.id, username: u.username }));
-    res.json(userList);
+app.get('/api/users', async (req, res) => {
+    try {
+        const users = await User.find({}, 'username _id');
+        const userList = users.map(u => ({ id: u._id, username: u.username }));
+        res.json(userList);
+    } catch (error) {
+        res.status(500).json({ message: 'Gagal mengambil data user.' });
+    }
 });
 
 // Jalankan Server pada Port 3001

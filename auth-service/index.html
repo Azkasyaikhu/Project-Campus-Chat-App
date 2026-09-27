@@ -253,7 +253,7 @@
             font-family: 'Courier New', Courier, monospace;
             font-size: 12px;
             overflow-x: auto;
-            max-height: 140px;
+            max-height: 180px;
             white-space: pre-wrap;
             word-break: break-all;
         }
@@ -284,30 +284,32 @@
             <p>Sistem Terdistribusi — Layanan Autentikasi</p>
         </div>
 
-        <div class="input-group">
-            <label for="username">NIM / Username Kredensial</label>
-            <div class="input-wrapper">
-                <i data-lucide="user"></i>
-                <input type="text" id="username" placeholder="Masukkan username">
+        <form id="auth-form" onsubmit="event.preventDefault();">
+            <div class="input-group">
+                <label for="username">NIM / Username Kredensial</label>
+                <div class="input-wrapper">
+                    <i data-lucide="user"></i>
+                    <input type="text" id="username" placeholder="Masukkan username" required autocomplete="username">
+                </div>
             </div>
-        </div>
 
-        <div class="input-group">
-            <label for="password">Kata Sandi</label>
-            <div class="input-wrapper">
-                <i data-lucide="lock"></i>
-                <input type="password" id="password" placeholder="••••••••">
+            <div class="input-group">
+                <label for="password">Kata Sandi</label>
+                <div class="input-wrapper">
+                    <i data-lucide="lock"></i>
+                    <input type="password" id="password" placeholder="••••••••" required autocomplete="current-password">
+                </div>
             </div>
-        </div>
 
-        <div class="actions-grid">
-            <button class="btn btn-secondary" onclick="register()">
-                <i data-lucide="user-plus" style="width:16px;"></i> Register
-            </button>
-            <button class="btn btn-primary" onclick="login()">
-                <i data-lucide="log-in" style="width:16px;"></i> Login
-            </button>
-        </div>
+            <div class="actions-grid">
+                <button type="button" class="btn btn-secondary" onclick="register(event)">
+                    <i data-lucide="user-plus" style="width:16px;"></i> Register
+                </button>
+                <button type="button" class="btn btn-primary" onclick="login(event)">
+                    <i data-lucide="log-in" style="width:16px;"></i> Login
+                </button>
+            </div>
+        </form>
 
         <!-- System Output Log -->
         <div class="terminal-section">
@@ -332,7 +334,7 @@
         // Menggunakan Hostname dinamis agar menyesuaikan dengan IP Server
         const API_URL = `http://${window.location.hostname}:3001/api`;
 
-        function updateTerminal(data, isSuccess) {
+        function updateTerminal(data, isSuccess, statusCode) {
             const outputElem = document.getElementById('output');
             const statusElem = document.getElementById('response-status');
 
@@ -340,48 +342,74 @@
 
             if (isSuccess) {
                 statusElem.className = 'response-status success';
-                statusElem.innerText = 'HTTP 200 OK';
+                statusElem.innerText = `HTTP ${statusCode || 200} OK`;
             } else {
                 statusElem.className = 'response-status error';
-                statusElem.innerText = 'HTTP ERROR';
+                statusElem.innerText = `HTTP ${statusCode || 'ERROR'}`;
             }
         }
 
-        async function register() {
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
+        async function register(e) {
+            if (e) e.preventDefault();
+            
+            const usernameInput = document.getElementById('username').value.trim();
+            const passwordInput = document.getElementById('password').value;
+
+            if (!usernameInput || !passwordInput) {
+                updateTerminal({ error: "Username dan Password tidak boleh kosong!" }, false, 400);
+                return;
+            }
+
+            document.getElementById('output').innerText = "// Mengirimkan payload register ke Server...";
 
             try {
                 const res = await fetch(`${API_URL}/register`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify({ username: usernameInput, password: passwordInput })
                 });
+                
                 const data = await res.json();
-                updateTerminal(data, res.ok);
+                updateTerminal(data, res.ok, res.status);
             } catch (err) {
-                updateTerminal({ error: "Gagal terhubung ke Auth Node (Port 3001)" }, false);
+                updateTerminal({ 
+                    error: "Gagal terhubung ke Auth Node (Port 3001)",
+                    detail: err.message 
+                }, false);
             }
         }
 
-        async function login() {
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
+        async function login(e) {
+            if (e) e.preventDefault();
+
+            const usernameInput = document.getElementById('username').value.trim();
+            const passwordInput = document.getElementById('password').value;
+
+            if (!usernameInput || !passwordInput) {
+                updateTerminal({ error: "Username dan Password tidak boleh kosong!" }, false, 400);
+                return;
+            }
+
+            document.getElementById('output').innerText = "// Verifikasi kredensial login...";
 
             try {
                 const res = await fetch(`${API_URL}/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify({ username: usernameInput, password: passwordInput })
                 });
+                
                 const data = await res.json();
-                updateTerminal(data, res.ok);
+                updateTerminal(data, res.ok, res.status);
 
                 if (data.token) {
                     localStorage.setItem('token', data.token);
                 }
             } catch (err) {
-                updateTerminal({ error: "Gagal terhubung ke Auth Node (Port 3001)" }, false);
+                updateTerminal({ 
+                    error: "Gagal terhubung ke Auth Node (Port 3001)",
+                    detail: err.message 
+                }, false);
             }
         }
     </script>
