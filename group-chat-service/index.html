@@ -129,18 +129,34 @@
     <script>
         lucide.createIcons();
 
-        // 1. CEK TOKEN JWT & AMBIL USERNAME OTOMATIS
+        // 1. TANGKAP TOKEN DARI URL & CEK OTORISASI
+        // Cek apakah ada token yang dilempar dari URL (dari Port 3001)
+        const urlParams = new URLSearchParams(window.location.search);
+        const tokenFromUrl = urlParams.get('token');
+        
+        if (tokenFromUrl) {
+            // Jika ada, simpan ke localStorage Port 3003
+            localStorage.setItem('token', tokenFromUrl);
+            // Bersihkan URL agar token tidak terlihat panjang di address bar
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+
+        // Cek token di localStorage
         const token = localStorage.getItem('token');
+        
         if (!token) {
             alert("Akses Ditolak! Anda belum login.\nSilakan login di Layanan Auth.");
             window.location.href = `http://${window.location.hostname}:3001`;
+        } else {
+            // Decode token untuk mendapatkan username
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            const currentUsername = payload.username;
+            
+            document.getElementById('greeting').innerText = `Selamat datang, ${currentUsername}!`;
+            document.getElementById('login-as-text').innerText = `Login sebagai: ${currentUsername}`;
         }
 
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        const currentUsername = payload.username;
-        document.getElementById('greeting').innerText = `Selamat datang, ${currentUsername}!`;
-        document.getElementById('login-as-text').innerText = `Login sebagai: ${currentUsername}`;
-
+        // ... LANJUTKAN KODE FETCH DAFTAR KELAS (loadRooms) SEPERTI BIASA DI BAWAH INI ...
         // 2. FETCH DAFTAR KELAS DARI MONGODB
         async function loadRooms() {
             try {
