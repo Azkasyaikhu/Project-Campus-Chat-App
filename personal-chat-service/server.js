@@ -7,124 +7,95 @@ const mongoose = require('mongoose');
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(express.static('.'));
 
-app.get('/', (req, res) => {
-    res.sendFile(__dirname + '/index.html');
-});
-
-// ==========================================
-// KONEKSI MONGODB ATLAS CLOUD
-// ==========================================
-const MONGO_URI = "mongodb+srv://azkasyaikhu0917_db_user:aK5LAb4MHvy6mEpF@cluster0.v8j6a5q.mongodb.net/campus_chat?appName=Cluster0";
-
-mongoose.connect(MONGO_URI)
-    .then(() => console.log('✅ Chat Service (User 2): Connected to MongoDB Atlas!'))
-    .catch(err => console.error('❌ Chat Service: Gagal koneksi ke MongoDB:', err));
-
-// ==========================================
-// SCHEMA & MODEL CHAT (MONGODB)
-// ==========================================
-const messageSchema = new mongoose.Schema({
-    pengirim: { type: String, required: true },
-    penerima: { type: String, required: true },
-    pesan: { type: String, required: true },
-    timestamp: { type: Date, default: Date.now }
-});
-
-const Message = mongoose.model('Message', messageSchema);
-
-// ==========================================
-// SOCKET.IO & HTTP SERVER
-// ==========================================
 const server = http.createServer(app);
-
 const io = new Server(server, {
     cors: {
-        origin: "*", // Mengizinkan koneksi dari IP mana saja
+        origin: "*",
         methods: ["GET", "POST"]
     }
 });
 
-// Variabel memori untuk menyimpan daftar socket ID user yang sedang online
+// ==========================================
+// KONEKSI MONGODB ATLAS CLOUD (UNTUK CHAT)
+// ==========================================
+const MONGO_URI = "mongodb+srv://azkasyaikhu0917_db_user:aK5LAb4MHvy6mEpF@cluster0.v8j6a5q.mongodb.net/campus_chat_messages?appName=Cluster0";
+
+mongoose.connect(MONGO_URI)
+    .then(() => console.log('✅ MongoDB Atlas (Chat Service) Terhubung Berhasil!'))
+    .catch(err => console.error('❌ Gagal Konek MongoDB:', err));
+
+// Schema & Model Pesan agar Riwayat Tersimpan
+const messageSchema = new mongoose.Schema({
+    pengirim: { type: String, required: true },
+    penerima: { type: String, required: true },
+    pesan: { type: String, required: true },
+    waktu: { type: Date, default: Date.now }
+});
+
+const Message = mongoose.model('Message', messageSchema);
+
+// Daftar user yang sedang online
 let penggunaOnline = {};
 
 io.on('connection', (socket) => {
-    console.log(`⚡ Ada perangkat terhubung | ID Socket: ${socket.id}`);
+    console.log(`🔌 Klien terhubung dengan ID Socket: ${socket.id}`);
 
-    // 1. Register User Online
+    // 1. Mendaftarkan user ke memori online
     socket.on('register_user', (namaUser) => {
-        if (namaUser) {
-            penggunaOnline[namaUser] = socket.id;
-            console.log(`👤 ${namaUser} masuk ke jaringan. Online:`, penggunaOnline);
-        }
+        penggunaOnline[namaUser] = socket.id;
+        console.log(`👤 User aktif: ${namaUser} (Socket ID: ${socket.id})`);
     });
 
-    // 2. Ambil Riwayat Chat dari MongoDB Atlas
+    // 2. Mengambil riwayat chat dari MongoDB saat user memilih teman
     socket.on('get_chat_history', async (data) => {
         const { pengirim, penerima } = data;
         try {
-            // Cari semua pesan antara pengirim dan penerima
             const history = await Message.find({
                 $or: [
                     { pengirim: pengirim, penerima: penerima },
                     { pengirim: penerima, penerima: pengirim }
                 ]
-            }).sort({ timestamp: 1 }); // Urutkan dari waktu lama ke baru
+            }).sort({ waktu: 1 }); // Urutkan dari yang terlama ke terbaru
 
             socket.emit('load_chat_history', history);
-        } catch (err) {
-            console.error("Gagal mengambil riwayat chat:", err);
+        } catch (error) {
+            console.error("Gagal mengambil riwayat chat:", error);
         }
     });
 
-    // 3. Menerima & Menyimpan Pesan 1-on-1 (Private Message)
+    // 3. Menerima, Menyimpan, dan Meneruskan Pesan Secara Real-Time
     socket.on('private_message', async (data) => {
         const { pengirim, penerima, pesan } = data;
-        const socketIdPenerima = penggunaOnline[penerima];
 
         try {
-            // A. SIMPAN KE MONGODB ATLAS CLOUD
-            const newMessage = new Message({
-                pengirim: pengirim,
-                penerima: penerima,
-                pesan: pesan
-            });
-            await newMessage.save();
-            console.log(`💾 Pesan dari [${pengirim}] ke [${penerima}] berhasil disimpan ke MongoDB Cloud!`);
+            // Simpan pesan ke MongoDB Atlas agar tidak hilang
+            const pesanBaru = new Message({ pengirim, penerima, pesan });
+            await pesanBaru.save();
 
-            // B. TERUSKAN SECARA REAL-TIME JIKA PENERIMA ONLINE
+            // Kirim konfirmasi ke pengirim bahwa pesan berhasil disimpan & dirender
+            socket.emit('pesan_terkirim', { pengirim, penerima, pesan });
+
+            // Cek apakah penerima sedang online
+            const socketIdPenerima = penggunaOnline[penerima];
             if (socketIdPenerima) {
-                io.to(socketIdPenerima).emit('terima_pesan', {
-                    pengirim: pengirim,
-                    penerima: penerima,
-                    pesan: pesan,
-                    timestamp: newMessage.timestamp
-                });
-                console.log(`📩 Pesan diteruskan secara realtime ke ${penerima}`);
+                // Kirim pesan secara instan ke layar penerima tanpa refresh
+                io.to(socketIdPenerima).emit('terima_pesan', { pengirim, penerima, pesan });
+                console.log(`📤 Pesan dari ${pengirim} dikirim real-time ke ${penerima}`);
             } else {
-                console.log(`ℹ️ ${penerima} sedang offline. Pesan tetap tersimpan di database.`);
+                console.log(`ℹ️ Pesan untuk ${penerima} tersimpan di database (User offline).`);
             }
-
-            // Kirim konfirmasi balik ke pengirim bahwa pesan sukses terkirim/terseimpan
-            socket.emit('pesan_terkirim', {
-                pengirim: pengirim,
-                penerima: penerima,
-                pesan: pesan,
-                timestamp: newMessage.timestamp
-            });
-
         } catch (error) {
-            console.error("❌ Gagal menyimpan pesan ke MongoDB:", error);
-            socket.emit('error_message', 'Gagal mengirim & menyimpan pesan ke database.');
+            console.error("Gagal menyimpan pesan:", error);
+            socket.emit('error_message', 'Gagal mengirim pesan ke server.');
         }
     });
 
-    // 4. User Disconnect
+    // 4. Handle saat user disconnect
     socket.on('disconnect', () => {
         for (let nama in penggunaOnline) {
             if (penggunaOnline[nama] === socket.id) {
-                console.log(`🔴 ${nama} keluar dari jaringan.`);
+                console.log(`❌ ${nama} terputus dari jaringan.`);
                 delete penggunaOnline[nama];
                 break;
             }
@@ -132,12 +103,10 @@ io.on('connection', (socket) => {
     });
 });
 
-// Jalankan Server Port 3002
-const PORT = process.env.PORT || 3002;
+const PORT = 3002;
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`=================================`);
-    console.log(`✅ Chat Service (User 2) Running!`);
+    console.log(`Personal Chat Service Running!`);
     console.log(`Port: ${PORT}`);
-    console.log(`Akses Lokal : http://localhost:${PORT}`);
     console.log(`=================================`);
 });
