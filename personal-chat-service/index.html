@@ -21,7 +21,9 @@
             --border: #334155;
             --success: #10b981;
             --error: #ef4444;
-            --chat-bg: #090d16;
+            --chat-bg: #0b0f19;
+            --bubble-self: #047857;
+            --bubble-other: #334155;
         }
 
         * {
@@ -79,6 +81,13 @@
             border-radius: 20px;
             padding: 40px;
             box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+            transition: all 0.3s ease;
+        }
+
+        /* Perlebar card khusus untuk area chat agar lebih leluasa */
+        .auth-card.chat-container {
+            max-width: 650px;
+            padding: 28px;
         }
 
         .brand-header {
@@ -211,23 +220,54 @@
             gap: 6px;
         }
 
+        /* Kotak Masuk ala Gelembung Chat Modern */
         #kotakMasuk {
             background-color: var(--chat-bg);
             border: 1px solid var(--border);
-            padding: 14px;
-            border-radius: 10px;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 13px;
-            height: 220px;
+            padding: 16px;
+            border-radius: 14px;
+            height: 320px;
             overflow-y: auto;
             list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
         }
 
+        /* Style Gelembung Pesan */
         .chat-message {
-            margin-bottom: 10px;
-            padding-bottom: 8px;
-            border-bottom: 1px dashed var(--border);
+            max-width: 75%;
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 13px;
+            line-height: 1.4;
             word-wrap: break-word;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-message.self {
+            background-color: var(--bubble-self);
+            align-self: flex-end;
+            border-bottom-right-radius: 2px;
+            color: #f8fafc;
+        }
+
+        .chat-message.other {
+            background-color: var(--bubble-other);
+            align-self: flex-start;
+            border-bottom-left-radius: 2px;
+            color: #f8fafc;
+        }
+
+        .msg-sender {
+            font-size: 10px;
+            font-weight: 700;
+            margin-bottom: 3px;
+            opacity: 0.8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .footer-text {
@@ -276,18 +316,18 @@
         </button>
     </div>
 
-    <!-- Section 2: Area Chatting -->
-    <div class="auth-card" id="areaChat" style="display:none; max-width: 550px;">
-        <div class="brand-header" style="margin-bottom: 24px;">
+    <!-- Section 2: Area Chatting Profesional -->
+    <div class="auth-card chat-container" id="areaChat" style="display:none;">
+        <div class="brand-header" style="margin-bottom: 20px;">
             <h2 style="font-size: 18px; color: var(--success); display:flex; justify-content:center; align-items:center; gap:8px;">
-                <i data-lucide="wifi"></i> Autentikasi Berhasil
+                <i data-lucide="wifi"></i> Sesi Aktif Terhubung
             </h2>
             <p id="statusUser" style="font-size: 13px; margin-top: 4px;"></p>
         </div>
 
         <div class="chat-grid">
             <div class="input-group" style="margin-bottom: 0;">
-                <label for="namaTeman">Penerima</label>
+                <label for="namaTeman">Penerima (Target)</label>
                 <div class="input-wrapper">
                     <i data-lucide="at-sign"></i>
                     <input type="text" id="namaTeman" placeholder="Nama target" oninput="muatRiwayatChat()">
@@ -302,19 +342,19 @@
             </div>
         </div>
 
-        <button class="btn btn-primary" onclick="kirimPesan()">
+        <button class="btn btn-primary" onclick="kirimPesan()" style="margin-bottom: 4px;">
             Kirim Pesan <i data-lucide="arrow-right" style="width:16px;"></i>
         </button>
 
-        <!-- Kotak Masuk / Terminal Log -->
+        <!-- Kotak Masuk / Gelembung Chat -->
         <div class="terminal-section">
             <div class="terminal-header">
                 <span class="terminal-title">
-                    <i data-lucide="database" style="width:14px;"></i> Live Chat & Riwayat (MongoDB Atlas)
+                    <i data-lucide="message-square" style="width:14px;"></i> Ruang Percakapan Real-Time
                 </span>
             </div>
             <ul id="kotakMasuk">
-                <li style="color: var(--text-muted); font-style: italic; font-size: 12px; border:none;">[Sistem] Masukkan nama penerima untuk mulai chat...</li>
+                <li style="color: var(--text-muted); font-style: italic; font-size: 12px; border:none; text-align:center; margin: auto;">[Sistem] Masukkan nama penerima untuk mulai percakapan...</li>
             </ul>
         </div>
     </div>
@@ -353,7 +393,7 @@
 
                     document.getElementById("formLoginChat").style.display = "none";
                     document.getElementById("areaChat").style.display = "block";
-                    document.getElementById("statusUser").innerText = `Login Terverifikasi sebagai: ${namaSaya}`;
+                    document.getElementById("statusUser").innerText = `Login sebagai: ${namaSaya}`;
                 } else {
                     alert("Akses Ditolak: " + (result.message || "Username belum terdaftar di Auth Service atau password salah!"));
                 }
@@ -396,35 +436,33 @@
         function tambahPesanKeLayar(pengirim, pesan, isSelf = false) {
             const listPesan = document.getElementById("kotakMasuk");
             
-            if(listPesan.children.length > 0 && listPesan.children[0].innerText.includes("[Sistem]")) {
+            if(listPesan.children.length === 1 && listPesan.children[0].innerText.includes("[Sistem]")) {
                 listPesan.innerHTML = "";
             }
 
             const li = document.createElement("li");
-            li.className = "chat-message";
+            li.className = `chat-message ${isSelf ? 'self' : 'other'}`;
             
-            const color = isSelf ? "var(--success)" : "#38bdf8";
             const label = isSelf ? "Kamu" : pengirim;
             
-            li.innerHTML = `<span style="color: ${color}; font-weight:bold;">[${label}]</span>: ${pesan}`;
+            li.innerHTML = `
+                <span class="msg-sender">${label}</span>
+                <span class="msg-text">${pesan}</span>
+            `;
             
             listPesan.appendChild(li);
             listPesan.scrollTop = listPesan.scrollHeight;
         }
 
-        // Event: Saat pesan kita sukses dikirim dan disimpan
         socket.on("pesan_terkirim", (data) => {
             const namaTeman = document.getElementById("namaTeman").value.trim();
-            // Tampilkan jika sedang aktif chat dengan penerima tersebut
             if (data.penerima === namaTeman || data.penerima === namaSaya) {
                 tambahPesanKeLayar(data.pengirim, data.pesan, true);
             }
         });
 
-        // Event: Menerima pesan masuk secara real-time dari siapa pun
         socket.on("terima_pesan", (data) => {
             const namaTeman = document.getElementById("namaTeman").value.trim();
-            // Otomatis arahkan kolom penerima ke pengirim pesan jika belum terisi, lalu tampilkan
             if (!namaTeman) {
                 document.getElementById("namaTeman").value = data.pengirim;
             }
@@ -434,13 +472,12 @@
             }
         });
 
-        // Event: Menampilkan riwayat chat dari database
         socket.on("load_chat_history", (history) => {
             const listPesan = document.getElementById("kotakMasuk");
             listPesan.innerHTML = "";
 
             if (!history || history.length === 0) {
-                listPesan.innerHTML = `<li style="color: var(--text-muted); font-style: italic; font-size: 12px; border:none;">Belum ada riwayat pesan dengan user ini.</li>`;
+                listPesan.innerHTML = `<li style="color: var(--text-muted); font-style: italic; font-size: 12px; border:none; text-align:center; margin: auto;">Belum ada riwayat pesan dengan user ini.</li>`;
                 return;
             }
 
