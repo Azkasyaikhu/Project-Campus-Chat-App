@@ -290,7 +290,7 @@
                 <label for="namaTeman">Penerima</label>
                 <div class="input-wrapper">
                     <i data-lucide="at-sign"></i>
-                    <input type="text" id="namaTeman" placeholder="Nama target" onchange="muatRiwayatChat()">
+                    <input type="text" id="namaTeman" placeholder="Nama target" oninput="muatRiwayatChat()">
                 </div>
             </div>
             <div class="input-group" style="margin-bottom: 0;">
@@ -310,11 +310,11 @@
         <div class="terminal-section">
             <div class="terminal-header">
                 <span class="terminal-title">
-                    <i data-lucide="database" style="width:14px;"></i> Riwayat Chat (MongoDB Atlas)
+                    <i data-lucide="database" style="width:14px;"></i> Live Chat & Riwayat (MongoDB Atlas)
                 </span>
             </div>
             <ul id="kotakMasuk">
-                <li style="color: var(--text-muted); font-style: italic; font-size: 12px; border:none;">[Sistem] Ketik nama penerima untuk memuat percakapan...</li>
+                <li style="color: var(--text-muted); font-style: italic; font-size: 12px; border:none;">[Sistem] Masukkan nama penerima untuk mulai chat...</li>
             </ul>
         </div>
     </div>
@@ -329,7 +329,6 @@
         const socket = io(`http://127.0.0.1:3002`); 
         let namaSaya = "";
 
-        // Fungsi IPI: Mengecek ke Auth Service (Port 3001) apakah user terdaftar
         async function verifikasiDanMasuk() {
             const usernameInput = document.getElementById("namaSaya").value.trim();
             const passwordInput = document.getElementById("passSaya").value.trim();
@@ -340,7 +339,6 @@
             }
 
             try {
-                // Menggunakan URL absolut 'http://127.0.0.1:3001/api/login' agar stabil
                 const response = await fetch('http://127.0.0.1:3001/api/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -375,7 +373,10 @@
             const namaTeman = document.getElementById("namaTeman").value.trim();
             const pesan = document.getElementById("isiPesan").value.trim();
 
-            if(!namaTeman || !pesan) return;
+            if(!namaTeman || !pesan) {
+                alert("Nama penerima dan isi pesan wajib diisi!");
+                return;
+            }
 
             socket.emit("private_message", {
                 pengirim: namaSaya,
@@ -411,25 +412,34 @@
             listPesan.scrollTop = listPesan.scrollHeight;
         }
 
+        // Event: Saat pesan kita sukses dikirim dan disimpan
         socket.on("pesan_terkirim", (data) => {
             const namaTeman = document.getElementById("namaTeman").value.trim();
-            if (data.penerima === namaTeman) {
+            // Tampilkan jika sedang aktif chat dengan penerima tersebut
+            if (data.penerima === namaTeman || data.penerima === namaSaya) {
                 tambahPesanKeLayar(data.pengirim, data.pesan, true);
             }
         });
 
+        // Event: Menerima pesan masuk secara real-time dari siapa pun
         socket.on("terima_pesan", (data) => {
             const namaTeman = document.getElementById("namaTeman").value.trim();
-            if (data.pengirim === namaTeman) {
+            // Otomatis arahkan kolom penerima ke pengirim pesan jika belum terisi, lalu tampilkan
+            if (!namaTeman) {
+                document.getElementById("namaTeman").value = data.pengirim;
+            }
+            
+            if (data.pengirim === document.getElementById("namaTeman").value.trim()) {
                 tambahPesanKeLayar(data.pengirim, data.pesan, false);
             }
         });
 
+        // Event: Menampilkan riwayat chat dari database
         socket.on("load_chat_history", (history) => {
             const listPesan = document.getElementById("kotakMasuk");
             listPesan.innerHTML = "";
 
-            if (history.length === 0) {
+            if (!history || history.length === 0) {
                 listPesan.innerHTML = `<li style="color: var(--text-muted); font-style: italic; font-size: 12px; border:none;">Belum ada riwayat pesan dengan user ini.</li>`;
                 return;
             }
