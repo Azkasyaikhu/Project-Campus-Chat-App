@@ -117,7 +117,7 @@ app.get('/api/users', async (req, res) => {
     }
 });
 
-// Jalankan Server pada Port 3001
+// Jalankan Server pada Port 3001 dengan binding '0.0.0.0'
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`=================================`);
     console.log(`Auth Service (User 1) Running!`);
