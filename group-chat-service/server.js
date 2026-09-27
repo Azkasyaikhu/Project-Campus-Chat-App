@@ -3,14 +3,15 @@ const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const path = require('path');
-const mongoose = require('mongoose');
-const jwt = require('jsonwebtoken'); // [BARU] Untuk validasi auth dari Port 3001
+const mongoose = require('mongoose'); // [BACKEND] Tambahkan Mongoose
 
 const app = express();
 app.use(cors());
-app.use(express.json());
 
-const JWT_SECRET = 'kunci_rahasia_campus_chat_2026'; // Harus sama persis dengan di Port 3001
+// [UI/UX & FRONTEND] Mengirim file index.html ke browser
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
 
 // ==========================================
 // [DATABASE] KONEKSI MONGODB ATLAS CLOUD
@@ -22,124 +23,92 @@ mongoose.connect(MONGO_URI)
     .catch(err => console.error('❌ [DATABASE] Connection Error:', err));
 
 // ==========================================
-// [DATABASE] SCHEMA & MODELS
+// [DATABASE] SCHEMA & MODEL CHAT GRUP
 // ==========================================
-// 1. Schema Pesan Chat
 const groupMessageSchema = new mongoose.Schema({
     room: { type: String, required: true },
     sender: { type: String, required: true },
     message: { type: String, required: true },
     timestamp: { type: Date, default: Date.now }
 });
+
 const GroupMessage = mongoose.model('GroupMessage', groupMessageSchema);
-
-// 2. Schema Ruang Kelas (Agar permanen)
-const roomSchema = new mongoose.Schema({
-    name: { type: String, required: true, unique: true },
-    createdAt: { type: Date, default: Date.now }
-});
-const Room = mongoose.model('Room', roomSchema);
-
-// ==========================================
-// [BACKEND] REST API
-// ==========================================
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-// API Ambil Daftar Kelas
-app.get('/api/rooms', async (req, res) => {
-    try {
-        const rooms = await Room.find().sort({ createdAt: -1 });
-        res.json(rooms);
-    } catch (err) {
-        res.status(500).json({ error: 'Gagal mengambil data kelas' });
-    }
-});
-
-// API Buat Kelas Baru
-app.post('/api/rooms', async (req, res) => {
-    try {
-        const { roomName } = req.body;
-        if (!roomName) return res.status(400).json({ error: 'Nama kelas wajib diisi' });
-
-        const newRoom = new Room({ name: roomName });
-        await newRoom.save();
-        res.status(201).json(newRoom);
-    } catch (err) {
-        res.status(400).json({ error: 'Kelas sudah ada atau gagal dibuat' });
-    }
-});
 
 // ==========================================
 // [BACKEND] SOCKET.IO SERVER
 // ==========================================
 const server = http.createServer(app);
 const io = new Server(server, {
-    cors: { origin: "*", methods: ["GET", "POST"] }
-});
-
-// Middleware Socket.io untuk Verifikasi Token JWT
-io.use((socket, next) => {
-    const token = socket.handshake.auth.token;
-    if (!token) return next(new Error("Akses Ditolak: Token tidak ditemukan"));
-
-    jwt.verify(token, JWT_SECRET, (err, decoded) => {
-        if (err) return next(new Error("Akses Ditolak: Token tidak valid/kadaluarsa"));
-        socket.username = decoded.username; // Simpan username dari token ke sesi socket
-        next();
-    });
+    cors: {
+        origin: "*", 
+        methods: ["GET", "POST"]
+    }
 });
 
 io.on('connection', (socket) => {
-    console.log(`[LOG] ⚡ User sah terkoneksi | Socket: ${socket.id} | User: ${socket.username}`);
+    console.log(`[LOG] ⚡ User baru terkoneksi | ID Socket: ${socket.id}`);
 
+    // 1. Join Room & Load History Chat
     socket.on('join_room', async (roomName) => {
         socket.join(roomName);
-        console.log(`[LOG] 🚪 ${socket.username} bergabung ke kelas: ${roomName}`);
+        console.log(`[LOG] 🚪 Socket ${socket.id} bergabung ke ruang: ${roomName}`);
         
         try {
-            // Tarik riwayat chat spesifik untuk kelas ini
+            // Ambil 50 pesan terakhir dari database untuk room ini
             const history = await GroupMessage.find({ room: roomName })
                 .sort({ timestamp: 1 })
-                .limit(100);
+                .limit(50);
+            
+            // Kirim riwayat chat hanya ke user yang baru join
             socket.emit('load_group_history', history);
         } catch (err) {
-            console.error('[ERROR] Gagal memuat history:', err);
+            console.error('[ERROR] Gagal memuat riwayat chat grup:', err);
         }
 
-        socket.to(roomName).emit('system_notification', `${socket.username} bergabung ke kelas.`);
+        // Notifikasi ke anggota lain di room
+        socket.to(roomName).emit('system_notification', `Anggota baru bergabung ke ${roomName}`);
     });
 
+    // 2. Menerima & Menyimpan Pesan Grup
     socket.on('send_group_message', async (data) => {
         try {
+            // Simpan pesan ke MongoDB Atlas
             const newGroupMsg = new GroupMessage({
                 room: data.room,
-                sender: socket.username, // Otomatis dari token, anti-spoofing
+                sender: data.sender,
                 message: data.message
             });
             await newGroupMsg.save();
 
-            // Broadcast ke semua anggota kelas
-            io.to(data.room).emit('receive_group_message', {
+            console.log(`[LOG] 💾 Pesan Grup Tersimpan di DB -> Ruang ${data.room} | Dari: ${data.sender}`);
+
+            // Teruskan/Broadcast pesan ke semua orang di room tersebut beserta waktu dari DB
+            socket.to(data.room).emit('receive_group_message', {
                 room: data.room,
-                sender: socket.username,
+                sender: data.sender,
                 message: data.message,
                 timestamp: newGroupMsg.timestamp
             });
+
+            // Kirim konfirmasi balik ke pengirim
+            socket.emit('message_sent_success', newGroupMsg);
+
         } catch (err) {
-            console.error('[ERROR] Gagal menyimpan pesan:', err);
+            console.error('[ERROR] Gagal menyimpan pesan grup:', err);
+            socket.emit('system_notification', 'Gagal mengirim pesan ke server.');
         }
     });
 
     socket.on('disconnect', () => {
-        console.log(`[LOG] 🔴 ${socket.username} terputus.`);
+        console.log(`[LOG] 🔴 User terputus: ${socket.id}`);
     });
 });
 
 const PORT = 3003;
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`===========================================`);
-    console.log(`🌐 Group Chat Node (User 3) Running on Port ${PORT}`);
+    console.log(`🌐 Group Chat Node (User 3) Running!`);
+    console.log(`🔌 Port: ${PORT}`);
+    console.log(`💻 Akses Lokal : http://localhost:${PORT}`);
     console.log(`===========================================`);
 });
