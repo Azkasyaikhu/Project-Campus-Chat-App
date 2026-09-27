@@ -326,7 +326,7 @@
     <script>
         lucide.createIcons();
 
-        const socket = io(`http://${window.location.hostname}:3002`); 
+        const socket = io(`http://127.0.0.1:3002`); 
         let namaSaya = "";
 
         // Fungsi IPI: Mengecek ke Auth Service (Port 3001) apakah user terdaftar
@@ -340,8 +340,8 @@
             }
 
             try {
-                // Melakukan request inter-service / inter-process ke Auth Service (Port 3001) milik Anggota 1
-                const response = await fetch(`http://${window.location.hostname}:3001/api/login`, {
+                // Menggunakan URL absolut 'http://127.0.0.1:3001/api/login' agar stabil
+                const response = await fetch('http://127.0.0.1:3001/api/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username: usernameInput, password: passwordInput })
@@ -350,7 +350,6 @@
                 const result = await response.json();
 
                 if (response.ok) {
-                    // Jika terdaftar di Auth Service, izinkan masuk ke Socket Chat
                     namaSaya = usernameInput;
                     socket.emit("register_user", namaSaya);
 
@@ -358,7 +357,6 @@
                     document.getElementById("areaChat").style.display = "block";
                     document.getElementById("statusUser").innerText = `Login Terverifikasi sebagai: ${namaSaya}`;
                 } else {
-                    // Jika gagal atau belum register
                     alert("Akses Ditolak: " + (result.message || "Username belum terdaftar di Auth Service atau password salah!"));
                 }
             } catch (err) {
