@@ -3,14 +3,15 @@ const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const mongoose = require('mongoose');
+const jwt = require('jsonwebtoken'); // [DITAMBAHKAN] Untuk verifikasi SSO
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ==========================================
+const JWT_SECRET = 'kunci_rahasia_campus_chat_2026';
+
 // MENYAJIKAN FILE HTML SECARA OTOMATIS
-// ==========================================
 app.use(express.static('.'));
 app.get('/', (req, res) => {
     res.sendFile(__dirname + '/index.html');
@@ -18,22 +19,16 @@ app.get('/', (req, res) => {
 
 const server = http.createServer(app);
 const io = new Server(server, {
-    cors: {
-        origin: "*",
-        methods: ["GET", "POST"]
-    }
+    cors: { origin: "*", methods: ["GET", "POST"] }
 });
 
-// ==========================================
 // KONEKSI MONGODB ATLAS CLOUD (UNTUK CHAT)
-// ==========================================
 const MONGO_URI = "mongodb+srv://azkasyaikhu0917_db_user:aK5LAb4MHvy6mEpF@cluster0.v8j6a5q.mongodb.net/campus_chat_messages?appName=Cluster0";
 
 mongoose.connect(MONGO_URI)
-    .then(() => console.log('✅ MongoDB Atlas (Chat Service) Terhubung Berhasil!'))
+    .then(() => console.log('✅ MongoDB Atlas (Personal Chat) Terhubung Berhasil!'))
     .catch(err => console.error('❌ Gagal Konek MongoDB:', err));
 
-// Schema & Model Pesan agar Riwayat Tersimpan
 const messageSchema = new mongoose.Schema({
     pengirim: { type: String, required: true },
     penerima: { type: String, required: true },
@@ -43,19 +38,27 @@ const messageSchema = new mongoose.Schema({
 
 const Message = mongoose.model('Message', messageSchema);
 
-// Daftar user yang sedang online
 let penggunaOnline = {};
 
-io.on('connection', (socket) => {
-    console.log(`🔌 Klien terhubung dengan ID Socket: ${socket.id}`);
+// [DITAMBAHKAN] Middleware Socket Autentikasi JWT
+io.use((socket, next) => {
+    const token = socket.handshake.auth.token;
+    if (!token) return next(new Error("Token tidak valid"));
 
-    // 1. Mendaftarkan user ke memori online
-    socket.on('register_user', (namaUser) => {
-        penggunaOnline[namaUser] = socket.id;
-        console.log(`👤 User aktif: ${namaUser} (Socket ID: ${socket.id})`);
+    jwt.verify(token, JWT_SECRET, (err, decoded) => {
+        if (err) return next(new Error("Token kadaluarsa"));
+        socket.username = decoded.username; 
+        next();
     });
+});
 
-    // 2. Mengambil riwayat chat dari MongoDB saat user memilih teman
+io.on('connection', (socket) => {
+    // Registrasi otomatis menggunakan identitas dari Token JWT
+    const namaUser = socket.username;
+    penggunaOnline[namaUser] = socket.id;
+    console.log(`🔌 [LOG] ${namaUser} terhubung | Socket ID: ${socket.id}`);
+
+    // Mengambil riwayat chat dari MongoDB
     socket.on('get_chat_history', async (data) => {
         const { pengirim, penerima } = data;
         try {
@@ -72,19 +75,18 @@ io.on('connection', (socket) => {
         }
     });
 
-    // 3. Menerima, Menyimpan, dan Meneruskan Pesan Secara Real-Time
+    // Menerima dan meneruskan pesan
     socket.on('private_message', async (data) => {
-        const { pengirim, penerima, pesan } = data;
+        // [KEAMANAN] Pengirim otomatis menggunakan username dari Token, bukan dari inputan user
+        const pengirim = socket.username; 
+        const { penerima, pesan } = data;
 
         try {
-            // Simpan pesan ke MongoDB Atlas
             const pesanBaru = new Message({ pengirim, penerima, pesan });
             await pesanBaru.save();
 
-            // Kirim konfirmasi ke pengirim
             socket.emit('pesan_terkirim', { pengirim, penerima, pesan });
 
-            // Cek apakah penerima sedang online
             const socketIdPenerima = penggunaOnline[penerima];
             if (socketIdPenerima) {
                 io.to(socketIdPenerima).emit('terima_pesan', { pengirim, penerima, pesan });
@@ -98,22 +100,16 @@ io.on('connection', (socket) => {
         }
     });
 
-    // 4. Handle saat user disconnect
+    // Handle disconnect
     socket.on('disconnect', () => {
-        for (let nama in penggunaOnline) {
-            if (penggunaOnline[nama] === socket.id) {
-                console.log(`❌ ${nama} terputus dari jaringan.`);
-                delete penggunaOnline[nama];
-                break;
-            }
-        }
+        console.log(`❌ ${socket.username} terputus dari jaringan.`);
+        delete penggunaOnline[socket.username];
     });
 });
 
 const PORT = 3002;
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`=================================`);
-    console.log(`Personal Chat Service Running!`);
-    console.log(`Port: ${PORT}`);
+    console.log(`✅ Personal Chat Service (Port ${PORT}) Running!`);
     console.log(`=================================`);
 });

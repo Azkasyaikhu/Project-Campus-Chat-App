@@ -4,278 +4,37 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Personal Chat (Anggota 2) - Campus Chat App</title>
-    <!-- Google Fonts & Lucide Icons -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- Socket.io Client CDN -->
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <style>
-        :root {
-            --primary: #1e3a8a;
-            --primary-hover: #1e40af;
-            --accent: #3b82f6;
-            --bg-main: #0f172a;
-            --card-bg: #1e293b;
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --border: #334155;
-            --success: #10b981;
-            --error: #ef4444;
-            --chat-bg: #0b0f19;
-            --bubble-self: #047857;
-            --bubble-other: #334155;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Plus Jakarta Sans', sans-serif;
-        }
-
-        body {
-            background: radial-gradient(circle at top left, #1e1b4b, #0f172a);
-            color: var(--text-main);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 24px;
-        }
-
-        .node-badge {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: rgba(30, 41, 59, 0.8);
-            border: 1px solid var(--border);
-            backdrop-filter: blur(8px);
-            padding: 8px 16px;
-            border-radius: 99px;
-            font-size: 12px;
-            color: var(--text-muted);
-            margin-bottom: 24px;
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            background-color: var(--success);
-            border-radius: 50%;
-            box-shadow: 0 0 8px var(--success);
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-            70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-        }
-
-        .auth-card {
-            width: 100%;
-            max-width: 460px;
-            background-color: var(--card-bg);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 40px;
-            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
-            transition: all 0.3s ease;
-        }
-
-        /* Perlebar card khusus untuk area chat agar lebih leluasa */
-        .auth-card.chat-container {
-            max-width: 650px;
-            padding: 28px;
-        }
-
-        .brand-header {
-            text-align: center;
-            margin-bottom: 32px;
-        }
-
-        .brand-icon {
-            width: 56px;
-            height: 56px;
-            background: linear-gradient(135deg, #10b981, #059669);
-            border-radius: 14px;
-            display: inline-flex;
-            justify-content: center;
-            align-items: center;
-            color: #fff;
-            margin-bottom: 16px;
-            box-shadow: 0 8px 16px rgba(16, 185, 129, 0.3);
-        }
-
-        .brand-header h1 {
-            font-size: 24px;
-            font-weight: 700;
-            letter-spacing: -0.5px;
-            margin-bottom: 6px;
-        }
-
-        .brand-header p {
-            font-size: 14px;
-            color: var(--text-muted);
-        }
-
-        .input-group {
-            margin-bottom: 20px;
-        }
-
-        .input-group label {
-            display: block;
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--text-muted);
-            margin-bottom: 8px;
-        }
-
-        .input-wrapper {
-            position: relative;
-            display: flex;
-            align-items: center;
-        }
-
-        .input-wrapper i {
-            position: absolute;
-            left: 14px;
-            color: var(--text-muted);
-            width: 18px;
-            height: 18px;
-        }
-
-        .input-wrapper input {
-            width: 100%;
-            padding: 12px 14px 12px 42px;
-            background-color: #0f172a;
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            color: var(--text-main);
-            font-size: 14px;
-            outline: none;
-            transition: all 0.2s ease;
-        }
-
-        .input-wrapper input:focus {
-            border-color: var(--success);
-            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
-        }
-
-        .btn {
-            display: inline-flex;
-            justify-content: center;
-            align-items: center;
-            gap: 8px;
-            padding: 12px;
-            border-radius: 10px;
-            font-size: 14px;
-            font-weight: 600;
-            border: none;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            width: 100%;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #10b981, #059669);
-            color: #ffffff;
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
-        }
-
-        .btn-primary:hover {
-            background: linear-gradient(135deg, #059669, #047857);
-            transform: translateY(-1px);
-        }
-
-        .chat-grid {
-            display: grid;
-            grid-template-columns: 1fr 2fr;
-            gap: 12px;
-            margin-bottom: 16px;
-        }
-
-        .terminal-section {
-            margin-top: 24px;
-            border-top: 1px solid var(--border);
-            padding-top: 20px;
-        }
-
-        .terminal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-        }
-
-        .terminal-title {
-            font-size: 12px;
-            font-weight: 700;
-            color: var(--text-muted);
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        /* Kotak Masuk ala Gelembung Chat Modern */
-        #kotakMasuk {
-            background-color: var(--chat-bg);
-            border: 1px solid var(--border);
-            padding: 16px;
-            border-radius: 14px;
-            height: 320px;
-            overflow-y: auto;
-            list-style: none;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        /* Style Gelembung Pesan */
-        .chat-message {
-            max-width: 75%;
-            padding: 10px 14px;
-            border-radius: 12px;
-            font-size: 13px;
-            line-height: 1.4;
-            word-wrap: break-word;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-            display: flex;
-            flex-direction: column;
-        }
-
-        .chat-message.self {
-            background-color: var(--bubble-self);
-            align-self: flex-end;
-            border-bottom-right-radius: 2px;
-            color: #f8fafc;
-        }
-
-        .chat-message.other {
-            background-color: var(--bubble-other);
-            align-self: flex-start;
-            border-bottom-left-radius: 2px;
-            color: #f8fafc;
-        }
-
-        .msg-sender {
-            font-size: 10px;
-            font-weight: 700;
-            margin-bottom: 3px;
-            opacity: 0.8;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .footer-text {
-            text-align: center;
-            font-size: 12px;
-            color: var(--text-muted);
-            margin-top: 24px;
-        }
+        :root { --primary: #1e3a8a; --primary-hover: #1e40af; --accent: #3b82f6; --bg-main: #0f172a; --card-bg: #1e293b; --text-main: #f8fafc; --text-muted: #94a3b8; --border: #334155; --success: #10b981; --error: #ef4444; --chat-bg: #0b0f19; --bubble-self: #047857; --bubble-other: #334155; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { background: radial-gradient(circle at top left, #1e1b4b, #0f172a); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 24px; }
+        .node-badge { display: flex; align-items: center; gap: 8px; background: rgba(30, 41, 59, 0.8); border: 1px solid var(--border); backdrop-filter: blur(8px); padding: 8px 16px; border-radius: 99px; font-size: 12px; color: var(--text-muted); margin-bottom: 24px; }
+        .status-dot { width: 8px; height: 8px; background-color: var(--success); border-radius: 50%; box-shadow: 0 0 8px var(--success); animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
+        .auth-card { width: 100%; max-width: 650px; background-color: var(--card-bg); border: 1px solid var(--border); border-radius: 20px; padding: 28px; box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5); transition: all 0.3s ease; }
+        .brand-header { text-align: center; margin-bottom: 32px; }
+        .input-group { margin-bottom: 20px; }
+        .input-group label { display: block; font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; }
+        .input-wrapper { position: relative; display: flex; align-items: center; }
+        .input-wrapper i { position: absolute; left: 14px; color: var(--text-muted); width: 18px; height: 18px; }
+        .input-wrapper input { width: 100%; padding: 12px 14px 12px 42px; background-color: #0f172a; border: 1px solid var(--border); border-radius: 10px; color: var(--text-main); font-size: 14px; outline: none; transition: all 0.2s ease; }
+        .input-wrapper input:focus { border-color: var(--success); box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2); }
+        .btn { display: inline-flex; justify-content: center; align-items: center; gap: 8px; padding: 12px; border-radius: 10px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; transition: all 0.2s ease; width: 100%; }
+        .btn-primary { background: linear-gradient(135deg, #10b981, #059669); color: #ffffff; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25); }
+        .btn-primary:hover { background: linear-gradient(135deg, #059669, #047857); transform: translateY(-1px); }
+        .chat-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 12px; margin-bottom: 16px; }
+        .terminal-section { margin-top: 24px; border-top: 1px solid var(--border); padding-top: 20px; }
+        .terminal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .terminal-title { font-size: 12px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; text-transform: uppercase; display: flex; align-items: center; gap: 6px; }
+        #kotakMasuk { background-color: var(--chat-bg); border: 1px solid var(--border); padding: 16px; border-radius: 14px; height: 320px; overflow-y: auto; list-style: none; display: flex; flex-direction: column; gap: 12px; }
+        .chat-message { max-width: 75%; padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.4; word-wrap: break-word; box-shadow: 0 2px 4px rgba(0,0,0,0.2); display: flex; flex-direction: column; }
+        .chat-message.self { background-color: var(--bubble-self); align-self: flex-end; border-bottom-right-radius: 2px; color: #f8fafc; }
+        .chat-message.other { background-color: var(--bubble-other); align-self: flex-start; border-bottom-left-radius: 2px; color: #f8fafc; }
+        .msg-sender { font-size: 10px; font-weight: 700; margin-bottom: 3px; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.5px; }
+        .footer-text { text-align: center; font-size: 12px; color: var(--text-muted); margin-top: 24px; }
     </style>
 </head>
 <body>
@@ -285,44 +44,16 @@
         <span>Distributed Node #2 — <strong>Personal Chat (Port 3002)</strong></span>
     </div>
 
-    <!-- Section 1: Form Verifikasi Auth -->
-    <div class="auth-card" id="formLoginChat">
-        <div class="brand-header">
-            <div class="brand-icon">
-                <i data-lucide="shield-check"></i>
+    <!-- Area Chatting Profesional (Otomatis Terbuka via Auth) -->
+    <div class="auth-card chat-container" id="areaChat">
+        <div class="brand-header" style="margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <h2 style="font-size: 18px; color: var(--success); display:flex; align-items:center; gap:8px;">
+                    <i data-lucide="wifi"></i> Sesi Aktif Terhubung
+                </h2>
+                <p id="statusUser" style="font-size: 13px; margin-top: 4px; text-align: left;"></p>
             </div>
-            <h1>Personal Chat Gateway</h1>
-            <p>Validasi Kredensial via Auth Service (Port 3001)</p>
-        </div>
-
-        <div class="input-group">
-            <label for="namaSaya">Username / NIM Terdaftar</label>
-            <div class="input-wrapper">
-                <i data-lucide="user"></i>
-                <input type="text" id="namaSaya" placeholder="Masukkan username yang sudah diregister">
-            </div>
-        </div>
-
-        <div class="input-group">
-            <label for="passSaya">Kata Sandi Akun</label>
-            <div class="input-wrapper">
-                <i data-lucide="lock"></i>
-                <input type="password" id="passSaya" placeholder="••••••••">
-            </div>
-        </div>
-
-        <button class="btn btn-primary" onclick="verifikasiDanMasuk()">
-            <i data-lucide="log-in" style="width:16px;"></i> Verifikasi & Masuk Jaringan
-        </button>
-    </div>
-
-    <!-- Section 2: Area Chatting Profesional -->
-    <div class="auth-card chat-container" id="areaChat" style="display:none;">
-        <div class="brand-header" style="margin-bottom: 20px;">
-            <h2 style="font-size: 18px; color: var(--success); display:flex; justify-content:center; align-items:center; gap:8px;">
-                <i data-lucide="wifi"></i> Sesi Aktif Terhubung
-            </h2>
-            <p id="statusUser" style="font-size: 13px; margin-top: 4px;"></p>
+            <button onclick="keluarSistem()" style="background:transparent; border:1px solid #334155; color:#94a3b8; padding: 6px 12px; border-radius:8px; cursor:pointer; font-size:12px;">Kembali ke Auth</button>
         </div>
 
         <div class="chat-grid">
@@ -346,7 +77,6 @@
             Kirim Pesan <i data-lucide="arrow-right" style="width:16px;"></i>
         </button>
 
-        <!-- Kotak Masuk / Gelembung Chat -->
         <div class="terminal-section">
             <div class="terminal-header">
                 <span class="terminal-title">
@@ -354,52 +84,51 @@
                 </span>
             </div>
             <ul id="kotakMasuk">
-                <li style="color: var(--text-muted); font-style: italic; font-size: 12px; border:none; text-align:center; margin: auto;">[Sistem] Masukkan nama penerima untuk mulai percakapan...</li>
+                <li style="color: var(--text-muted); font-style: italic; font-size: 12px; border:none; text-align:center; margin: auto;">[Sistem] Masukkan nama penerima untuk memuat percakapan...</li>
             </ul>
         </div>
     </div>
 
-    <div class="footer-text">
-        Project Sistem Terdistribusi Kelompok • 2026
-    </div>
+    <div class="footer-text">Project Sistem Terdistribusi Kelompok • 2026</div>
 
     <script>
         lucide.createIcons();
 
-        const socket = io(`http://127.0.0.1:3002`); 
+        let socket;
         let namaSaya = "";
 
-        async function verifikasiDanMasuk() {
-            const usernameInput = document.getElementById("namaSaya").value.trim();
-            const passwordInput = document.getElementById("passSaya").value.trim();
+        // TANGKAP TOKEN DARI URL (LOGIKA SSO)
+        const urlParams = new URLSearchParams(window.location.search);
+        const tokenFromUrl = urlParams.get('token');
+        
+        if (tokenFromUrl) {
+            localStorage.setItem('token', tokenFromUrl);
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
 
-            if (!usernameInput || !passwordInput) {
-                alert("Username dan Password tidak boleh kosong!");
-                return;
-            }
+        const token = localStorage.getItem('token');
+        
+        if (!token) {
+            alert("Akses Ditolak! Anda belum login.\nSilakan login di Layanan Auth.");
+            window.location.href = `http://${window.location.hostname}:3001`;
+        } else {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            namaSaya = payload.username;
+            document.getElementById("statusUser").innerText = `Login sebagai: ${namaSaya}`;
 
-            try {
-                const response = await fetch('http://127.0.0.1:3001/api/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username: usernameInput, password: passwordInput })
-                });
+            // KONEKSI SOCKET DENGAN TOKEN JWT
+            socket = io(`http://${window.location.hostname}:3002`, {
+                auth: { token: token }
+            });
 
-                const result = await response.json();
+            socket.on("connect_error", (err) => {
+                alert("Sesi kadaluarsa. Silakan login kembali!");
+                window.location.href = `http://${window.location.hostname}:3001`;
+            });
+        }
 
-                if (response.ok) {
-                    namaSaya = usernameInput;
-                    socket.emit("register_user", namaSaya);
-
-                    document.getElementById("formLoginChat").style.display = "none";
-                    document.getElementById("areaChat").style.display = "block";
-                    document.getElementById("statusUser").innerText = `Login sebagai: ${namaSaya}`;
-                } else {
-                    alert("Akses Ditolak: " + (result.message || "Username belum terdaftar di Auth Service atau password salah!"));
-                }
-            } catch (err) {
-                alert("Gagal terhubung ke Auth Service (Port 3001). Pastikan server Anggota 1 sedang menyala!");
-            }
+        function keluarSistem() {
+            window.location.href = `http://${window.location.hostname}:3001`;
         }
 
         function muatRiwayatChat() {
@@ -419,8 +148,7 @@
             }
 
             socket.emit("private_message", {
-                pengirim: namaSaya,
-                penerima: namaTeman,
+                penerima: namaTeman, // Pengirim diambil otomatis dari server via Token
                 pesan: pesan
             });
 
@@ -428,9 +156,7 @@
         }
 
         function handleKeyPress(event) {
-            if (event.key === 'Enter') {
-                kirimPesan();
-            }
+            if (event.key === 'Enter') kirimPesan();
         }
 
         function tambahPesanKeLayar(pengirim, pesan, isSelf = false) {
@@ -442,14 +168,9 @@
 
             const li = document.createElement("li");
             li.className = `chat-message ${isSelf ? 'self' : 'other'}`;
-            
             const label = isSelf ? "Kamu" : pengirim;
             
-            li.innerHTML = `
-                <span class="msg-sender">${label}</span>
-                <span class="msg-text">${pesan}</span>
-            `;
-            
+            li.innerHTML = `<span class="msg-sender">${label}</span><span class="msg-text">${pesan}</span>`;
             listPesan.appendChild(li);
             listPesan.scrollTop = listPesan.scrollHeight;
         }
