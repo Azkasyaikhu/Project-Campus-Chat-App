@@ -4,249 +4,71 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Auth Service - Campus Chat App</title>
-    <!-- Google Fonts & Lucide Icons -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        :root {
-            --primary: #1e3a8a;
-            --accent: #3b82f6;
-            --bg-main: #0f172a;
-            --card-bg: #1e293b;
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --border: #334155;
-            --success: #10b981;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Plus Jakarta Sans', sans-serif;
-        }
-
-        body {
-            background: radial-gradient(circle at top left, #1e1b4b, #0f172a);
-            color: var(--text-main);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 24px;
-        }
-
-        .auth-card {
-            width: 100%;
-            max-width: 460px;
-            background-color: var(--card-bg);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 40px;
-            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
-        }
-
-        .brand-header {
-            text-align: center;
-            margin-bottom: 32px;
-        }
-
-        .brand-icon {
-            width: 56px;
-            height: 56px;
-            background: linear-gradient(135deg, var(--accent), var(--primary));
-            border-radius: 14px;
-            display: inline-flex;
-            justify-content: center;
-            align-items: center;
-            color: #fff;
-            margin-bottom: 16px;
-        }
-
-        .input-group {
-            margin-bottom: 20px;
-        }
-
-        .input-group label {
-            display: block;
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--text-muted);
-            margin-bottom: 8px;
-        }
-
-        .input-wrapper input {
-            width: 100%;
-            padding: 12px 14px;
-            background-color: #0f172a;
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            color: var(--text-main);
-            font-size: 14px;
-            outline: none;
-        }
-
-        .btn {
-            display: inline-flex;
-            justify-content: center;
-            align-items: center;
-            gap: 8px;
-            padding: 12px;
-            border-radius: 10px;
-            font-size: 14px;
-            font-weight: 600;
-            border: none;
-            cursor: pointer;
-            width: 100%;
-            transition: all 0.2s ease;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, var(--accent), var(--primary));
-            color: #ffffff;
-            margin-bottom: 12px;
-        }
-
-        .btn-secondary {
-            background: transparent;
-            border: 1px solid var(--border);
-            color: var(--text-main);
-        }
-
-        /* Navigasi Dashboard Setelah Login */
-        .menu-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            margin-top: 20px;
-        }
-
-        .menu-btn {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            padding: 16px;
-            background: #0f172a;
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            color: var(--text-main);
-            text-decoration: none;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .menu-btn:hover {
-            border-color: var(--accent);
-            transform: translateY(-2px);
-            background: #1e293b;
-        }
-
-        .menu-icon {
-            width: 42px;
-            height: 42px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-        }
-
-        .menu-info h3 {
-            font-size: 15px;
-            margin-bottom: 2px;
-        }
-
-        .menu-info p {
-            font-size: 12px;
-            color: var(--text-muted);
-        }
+        :root { --primary: #1e3a8a; --accent: #3b82f6; --bg-main: #0f172a; --card-bg: #1e293b; --text-main: #f8fafc; --text-muted: #94a3b8; --border: #334155; --success: #10b981; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { background: radial-gradient(circle at top left, #1e1b4b, #0f172a); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 24px; }
+        .auth-card { width: 100%; max-width: 460px; background-color: var(--card-bg); border: 1px solid var(--border); border-radius: 20px; padding: 40px; box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5); }
+        .brand-header { text-align: center; margin-bottom: 32px; }
+        .brand-icon { width: 56px; height: 56px; background: linear-gradient(135deg, var(--accent), var(--primary)); border-radius: 14px; display: inline-flex; justify-content: center; align-items: center; color: #fff; margin-bottom: 16px; }
+        .input-group { margin-bottom: 20px; }
+        .input-group label { display: block; font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; }
+        .input-wrapper input { width: 100%; padding: 12px 14px; background-color: #0f172a; border: 1px solid var(--border); border-radius: 10px; color: var(--text-main); font-size: 14px; outline: none; }
+        .btn { display: inline-flex; justify-content: center; align-items: center; gap: 8px; padding: 12px; border-radius: 10px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; width: 100%; transition: all 0.2s ease; }
+        .btn-primary { background: linear-gradient(135deg, var(--accent), var(--primary)); color: #ffffff; margin-bottom: 12px; }
+        .btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--text-main); }
+        .menu-grid { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; }
+        .menu-btn { display: flex; align-items: center; gap: 16px; padding: 16px; background: #0f172a; border: 1px solid var(--border); border-radius: 12px; color: var(--text-main); text-decoration: none; cursor: pointer; transition: all 0.2s ease; }
+        .menu-btn:hover { border-color: var(--accent); transform: translateY(-2px); background: #1e293b; }
+        .menu-icon { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; }
+        .menu-info h3 { font-size: 15px; margin-bottom: 2px; }
+        .menu-info p { font-size: 12px; color: var(--text-muted); }
     </style>
 </head>
 <body>
 
-    <!-- HALAMAN 1: FORM LOGIN & REGISTER -->
     <div class="auth-card" id="authSection">
         <div class="brand-header">
-            <div class="brand-icon">
-                <i data-lucide="shield-check"></i>
-            </div>
+            <div class="brand-icon"><i data-lucide="shield-check"></i></div>
             <h1>Campus Auth</h1>
             <p>Authentication Service (User 1)</p>
         </div>
-
         <div class="input-group">
             <label for="username">Username</label>
-            <div class="input-wrapper">
-                <input type="text" id="username" placeholder="Masukkan username">
-            </div>
+            <div class="input-wrapper"><input type="text" id="username" placeholder="Masukkan username"></div>
         </div>
-
         <div class="input-group">
             <label for="password">Password</label>
-            <div class="input-wrapper">
-                <input type="password" id="password" placeholder="Masukkan password">
-            </div>
+            <div class="input-wrapper"><input type="password" id="password" placeholder="Masukkan password"></div>
         </div>
-
-        <button class="btn btn-primary" onclick="handleLogin()">
-            <i data-lucide="log-in" style="width:16px;"></i> Masuk / Login
-        </button>
-        <button class="btn btn-secondary" onclick="handleRegister()">
-            <i data-lucide="user-plus" style="width:16px;"></i> Register Akun Baru
-        </button>
+        <button class="btn btn-primary" onclick="handleLogin()"><i data-lucide="log-in" style="width:16px;"></i> Masuk / Login</button>
+        <button class="btn btn-secondary" onclick="handleRegister()"><i data-lucide="user-plus" style="width:16px;"></i> Register Akun Baru</button>
     </div>
 
-    <!-- HALAMAN 2: PILIHAN DASHBOARD (SETELAH LOGIN) -->
     <div class="auth-card" id="dashboardSection" style="display: none;">
         <div class="brand-header">
-            <div class="brand-icon" style="background: linear-gradient(135deg, #10b981, #059669);">
-                <i data-lucide="user-check"></i>
-            </div>
+            <div class="brand-icon" style="background: linear-gradient(135deg, #10b981, #059669);"><i data-lucide="user-check"></i></div>
             <h2>Selamat Datang!</h2>
             <p id="userGreeting" style="color: var(--success); font-weight: 600; margin-top: 4px;"></p>
         </div>
-
         <p style="font-size: 13px; color: var(--text-muted); text-align: center;">Silakan pilih layanan yang ingin kamu akses:</p>
-
         <div class="menu-grid">
-            <!-- Pilihan 1: Personal Chat (User 2 - Port 3002) -->
-            <div class="menu-btn" onclick="goToService('http://localhost:3002')">
-                <div class="menu-icon" style="background: #10b981;">
-                    <i data-lucide="message-square"></i>
-                </div>
-                <div class="menu-info">
-                    <h3>Personal Chat</h3>
-                    <p>Pesan langsung 1-on-1 (Node 2)</p>
-                </div>
+            <div class="menu-btn" onclick="goToService(`http://${window.location.hostname}:3002`)">
+                <div class="menu-icon" style="background: #10b981;"><i data-lucide="message-square"></i></div>
+                <div class="menu-info"><h3>Personal Chat</h3><p>Pesan langsung 1-on-1 (Node 2)</p></div>
             </div>
-
-            <!-- Pilihan 2: Group Chat (Port 3003 - Jika ada/opsional) -->
-            <div class="menu-btn" onclick="goToService('http://localhost:3003')">
-                <div class="menu-icon" style="background: #3b82f6;">
-                    <i data-lucide="users"></i>
-                </div>
-                <div class="menu-info">
-                    <h3>Group Chat</h3>
-                    <p>Ruang percakapan grup (Node 3)</p>
-                </div>
+            <div class="menu-btn" onclick="goToService(`http://${window.location.hostname}:3003`)">
+                <div class="menu-icon" style="background: #3b82f6;"><i data-lucide="users"></i></div>
+                <div class="menu-info"><h3>Group Chat</h3><p>Ruang percakapan grup (Node 3)</p></div>
             </div>
-
-            <!-- Pilihan 3: Notification Chat (Port 3004 - Jika ada/opsional) -->
-            <div class="menu-btn" onclick="goToService('http://localhost:3004')">
-                <div class="menu-icon" style="background: #f59e0b;">
-                    <i data-lucide="bell"></i>
-                </div>
-                <div class="menu-info">
-                    <h3>Notification Chat</h3>
-                    <p>Layanan siaran & notifikasi (Node 4)</p>
-                </div>
+            <div class="menu-btn" onclick="goToService(`http://${window.location.hostname}:3004`)">
+                <div class="menu-icon" style="background: #f59e0b;"><i data-lucide="bell"></i></div>
+                <div class="menu-info"><h3>Notification Chat</h3><p>Layanan siaran & notifikasi (Node 4)</p></div>
             </div>
         </div>
-
-        <button class="btn btn-secondary" style="margin-top: 24px;" onclick="handleLogout()">
-            <i data-lucide="log-out" style="width:16px;"></i> Keluar / Logout
-        </button>
+        <button class="btn btn-secondary" style="margin-top: 24px;" onclick="handleLogout()"><i data-lucide="log-out" style="width:16px;"></i> Keluar / Logout</button>
     </div>
 
     <script>
@@ -255,11 +77,7 @@
         async function handleLogin() {
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
-
-            if (!username || !password) {
-                alert('Harap isi username dan password!');
-                return;
-            }
+            if (!username || !password) return alert('Harap isi username dan password!');
 
             try {
                 const response = await fetch('/api/login', {
@@ -267,32 +85,21 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password })
                 });
-
                 const result = await response.json();
-
                 if (response.ok) {
-                    // Simpan data login di Session
                     localStorage.setItem('currentUser', username);
                     localStorage.setItem('authToken', result.token);
-
-                    // Tampilkan Halaman Menu
                     showDashboard(username);
                 } else {
                     alert(result.message || 'Login gagal!');
                 }
-            } catch (err) {
-                alert('Gagal terhubung ke server.');
-            }
+            } catch (err) { alert('Gagal terhubung ke server.'); }
         }
 
         async function handleRegister() {
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
-
-            if (!username || !password) {
-                alert('Harap isi username dan password!');
-                return;
-            }
+            if (!username || !password) return alert('Harap isi username dan password!');
 
             try {
                 const response = await fetch('/api/register', {
@@ -300,12 +107,9 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password })
                 });
-
                 const result = await response.json();
                 alert(result.message);
-            } catch (err) {
-                alert('Gagal terhubung ke server.');
-            }
+            } catch (err) { alert('Gagal terhubung ke server.'); }
         }
 
         function showDashboard(username) {
@@ -315,8 +119,9 @@
         }
 
         function goToService(url) {
-            // Membuka layanan sesuai pilihan di tab baru atau tab yang sama
-            window.location.href = url;
+            // [MODIFIKASI PENTING]: Membawa token ke port yang berbeda
+            const token = localStorage.getItem('authToken');
+            window.location.href = `${url}?token=${token}`;
         }
 
         function handleLogout() {

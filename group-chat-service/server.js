@@ -12,13 +12,13 @@ app.use(express.json());
 
 const JWT_SECRET = 'kunci_rahasia_campus_chat_2026';
 
-// [UI/UX] Menampilkan Frontend
+// Menampilkan Frontend
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // ==========================================
-// [DATABASE] MONGODB ATLAS
+// KONEKSI MONGODB ATLAS CLOUD
 // ==========================================
 const MONGO_URI = "mongodb+srv://azkasyaikhu0917_db_user:aK5LAb4MHvy6mEpF@cluster0.v8j6a5q.mongodb.net/campus_chat?appName=Cluster0";
 
@@ -42,11 +42,10 @@ const roomSchema = new mongoose.Schema({
 const Room = mongoose.model('Room', roomSchema);
 
 // ==========================================
-// [API] KELOLA RUANG KELAS PERMANEN
+// API KELOLA RUANG KELAS PERMANEN
 // ==========================================
 app.get('/api/rooms', async (req, res) => {
     try {
-        // Ambil data room dari DB, default tambahkan 3 kelas awal jika DB kosong
         let rooms = await Room.find().sort({ createdAt: 1 });
         if(rooms.length === 0) {
             const defaultRooms = [{name: 'Sistem Terdistribusi'}, {name: 'Jaringan Komputer'}, {name: 'Pemrograman Web'}];
@@ -71,7 +70,7 @@ app.post('/api/rooms', async (req, res) => {
 });
 
 // ==========================================
-// [SOCKET.IO] CHAT REAL-TIME
+// SOCKET.IO CHAT REAL-TIME
 // ==========================================
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*", methods: ["GET", "POST"] } });

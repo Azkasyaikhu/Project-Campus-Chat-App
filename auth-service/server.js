@@ -68,28 +68,6 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
-app.post('/api/verify-token', (req, res) => {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-
-    if (!token) return res.status(401).json({ valid: false, message: 'Token tidak ada' });
-
-    jwt.verify(token, JWT_SECRET, (err, user) => {
-        if (err) return res.status(403).json({ valid: false, message: 'Token tidak valid' });
-        res.json({ valid: true, user });
-    });
-});
-
-app.get('/api/users', async (req, res) => {
-    try {
-        const users = await User.find({}, 'username _id');
-        const userList = users.map(u => ({ id: u._id, username: u.username }));
-        res.json(userList);
-    } catch (error) {
-        res.status(500).json({ message: 'Gagal mengambil data user.' });
-    }
-});
-
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`=================================`);
     console.log(`Auth Service (User 1) Running!`);
