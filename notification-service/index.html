@@ -4,11 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Campus Chat App - Notification</title>
-    <!-- Menggunakan Tailwind CSS via CDN agar desainnya sama persis dengan milik Azka -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
-        /* Modifikasi scrollbar agar terlihat modern */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
@@ -17,29 +15,29 @@
 </head>
 <body class="bg-[#0f172a] text-slate-200 font-sans min-h-screen flex flex-col items-center justify-center py-10 selection:bg-blue-500/30">
     
-    <!-- Status Badge (Sesuai dengan UI Azka) -->
-    <div class="mb-8 flex items-center gap-2 px-4 py-2 rounded-full border border-slate-700 bg-slate-800/50 shadow-lg">
+    <div class="mb-6 flex items-center gap-2 px-4 py-2 rounded-full border border-slate-700 bg-slate-800/50 shadow-lg">
         <div id="status-dot" class="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)] transition-colors duration-300"></div>
         <span class="text-xs font-medium text-slate-400">Distributed Node #4 — Notification Gateway (Port 3004)</span>
     </div>
 
-    <!-- Main Card -->
     <div class="w-full max-w-md bg-[#1e293b] rounded-2xl shadow-2xl border border-slate-700 p-8 relative overflow-hidden">
         
-        <!-- Icon & Header -->
+        <!-- [DITAMBAHKAN] Top Bar: Info User & Tombol Kembali -->
+        <div class="flex justify-between items-center mb-6 border-b border-slate-700 pb-3">
+            <div class="text-xs font-medium text-emerald-400" id="login-as-text">Memverifikasi Auth...</div>
+            <button onclick="window.location.href = `http://${window.location.hostname}:3001`" class="text-[11px] border border-slate-600 text-slate-300 px-3 py-1.5 rounded-lg hover:bg-slate-700 transition-colors">Kembali ke Menu</button>
+        </div>
+
         <div class="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-[0_0_15px_rgba(37,99,235,0.5)]">
-            <!-- Bell Icon -->
             <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
             </svg>
         </div>
-        <h1 class="text-2xl font-bold text-center text-white mb-1 tracking-tight">Campus Chat App</h1>
-        <p class="text-sm text-center text-slate-400 mb-8">Sistem Terdistribusi — Layanan Notifikasi</p>
+        <h1 class="text-2xl font-bold text-center text-white mb-1 tracking-tight">Pusat Notifikasi</h1>
+        <p class="text-sm text-center text-slate-400 mb-8">Sistem Terdistribusi — Broadcast Global</p>
 
-        <!-- Live Notifications Area -->
         <h2 class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Kotak Masuk (Live)</h2>
         <div id="notification-list" class="flex flex-col gap-3 h-48 overflow-y-auto pr-1 mb-6">
-            <!-- Tampilan jika kosong -->
             <div id="empty-state" class="text-sm text-slate-500 text-center mt-12 font-mono">
                 // Menunggu notifikasi masuk...
             </div>
@@ -47,74 +45,103 @@
 
         <hr class="border-slate-700/60 my-6">
 
-        <!-- Payload Response (Sesuai dengan UI Azka) -->
         <h2 class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
             <span>>_</span> SYSTEM LOG
         </h2>
         <div class="bg-[#0f172a] rounded-xl p-4 border border-slate-800 shadow-inner font-mono text-xs">
-            <span id="log-text" class="text-red-400 transition-colors duration-300">// Menunggu koneksi WebSocket...</span>
+            <span id="log-text" class="text-amber-400 transition-colors duration-300">// Memeriksa Kredensial SSO...</span>
         </div>
     </div>
 
-    <!-- Footer -->
     <div class="mt-8 text-[11px] text-slate-500 tracking-wider">
         Project Sistem Terdistribusi Kelompok • 2026
     </div>
 
-    <!-- Script Logika Client -->
     <script>
-        const socket = io('http://localhost:3004');
         const statusDot = document.getElementById('status-dot');
         const emptyState = document.getElementById('empty-state');
         const notifList = document.getElementById('notification-list');
         const logText = document.getElementById('log-text');
+        
+        let socket;
 
-        socket.on('connect', () => {
-            // Ubah lampu indikator jadi hijau
-            statusDot.classList.replace('bg-red-500', 'bg-emerald-500');
-            statusDot.classList.replace('shadow-[0_0_8px_rgba(239,68,68,0.8)]', 'shadow-[0_0_8px_rgba(16,185,129,0.8)]');
-            logText.textContent = '// Koneksi Socket (Port 3004) Berhasil Dibuat.';
-            logText.className = 'text-emerald-400';
-        });
+        // [DITAMBAHKAN] TANGKAP TOKEN DARI URL (LOGIKA SSO)
+        const urlParams = new URLSearchParams(window.location.search);
+        const tokenFromUrl = urlParams.get('token');
+        
+        if (tokenFromUrl) {
+            localStorage.setItem('token', tokenFromUrl);
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
 
-        socket.on('disconnect', () => {
-            // Ubah lampu indikator jadi merah
-            statusDot.classList.replace('bg-emerald-500', 'bg-red-500');
-            statusDot.classList.replace('shadow-[0_0_8px_rgba(16,185,129,0.8)]', 'shadow-[0_0_8px_rgba(239,68,68,0.8)]');
-            logText.textContent = '// ERROR: Koneksi Terputus!';
-            logText.className = 'text-red-400';
-        });
+        const token = localStorage.getItem('token');
+        
+        if (!token) {
+            alert("Akses Ditolak! Anda belum login.\nSilakan login di Layanan Auth.");
+            window.location.href = `http://${window.location.hostname}:3001`;
+        } else {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            document.getElementById('login-as-text').innerText = `Login: @${payload.username}`;
 
-        socket.on('new_notification', (data) => {
+            // KONEKSI SOCKET DENGAN TOKEN
+            socket = io(`http://${window.location.hostname}:3004`, {
+                auth: { token: token }
+            });
+
+            socket.on("connect_error", (err) => {
+                alert("Sesi kadaluarsa. Silakan login kembali!");
+                window.location.href = `http://${window.location.hostname}:3001`;
+            });
+
+            socket.on('connect', () => {
+                statusDot.classList.replace('bg-red-500', 'bg-emerald-500');
+                statusDot.classList.replace('shadow-[0_0_8px_rgba(239,68,68,0.8)]', 'shadow-[0_0_8px_rgba(16,185,129,0.8)]');
+                logText.textContent = `// SSO Valid. Terkoneksi ke Port 3004.`;
+                logText.className = 'text-emerald-400';
+            });
+
+            socket.on('disconnect', () => {
+                statusDot.classList.replace('bg-emerald-500', 'bg-red-500');
+                statusDot.classList.replace('shadow-[0_0_8px_rgba(16,185,129,0.8)]', 'shadow-[0_0_8px_rgba(239,68,68,0.8)]');
+                logText.textContent = '// ERROR: Koneksi Terputus!';
+                logText.className = 'text-red-400';
+            });
+
+            // Tampilkan History Notifikasi
+            socket.on('initial_notifications', (history) => {
+                if(history && history.length > 0) {
+                    if (emptyState) emptyState.style.display = 'none';
+                    history.reverse().forEach(notif => renderNotif(notif));
+                }
+            });
+
+            socket.on('new_notification', (data) => {
+                renderNotif(data);
+                logText.textContent = `// Payload Masuk: "${data.title}"`;
+                logText.className = data.type === 'danger' ? 'text-red-400' : 'text-blue-400';
+            });
+        }
+
+        function renderNotif(data) {
             if (emptyState) emptyState.style.display = 'none';
-
-            // Menentukan warna berdasarkan tipe notifikasi
-            let colorClass = 'text-blue-400';
             let borderAccent = 'border-blue-500/30';
             
-            if(data.type === 'success') { colorClass = 'text-emerald-400'; borderAccent = 'border-emerald-500/30'; }
-            if(data.type === 'warning') { colorClass = 'text-amber-400'; borderAccent = 'border-amber-500/30'; }
-            if(data.type === 'danger') { colorClass = 'text-red-400'; borderAccent = 'border-red-500/30'; }
+            if(data.type === 'success') borderAccent = 'border-emerald-500/30';
+            if(data.type === 'warning') borderAccent = 'border-amber-500/30';
+            if(data.type === 'danger') borderAccent = 'border-red-500/30';
 
-            // Membuat elemen notifikasi baru
             const item = document.createElement('div');
             item.className = `p-3.5 rounded-xl bg-[#0f172a] border border-slate-700 ${borderAccent} flex flex-col gap-1.5 shadow-sm transition-all duration-300 transform hover:scale-[1.02]`;
             
             item.innerHTML = `
                 <div class="flex items-center justify-between">
                     <strong class="text-[13px] text-slate-200 tracking-wide">${data.title}</strong>
-                    <span class="text-[10px] text-slate-500 font-mono">${data.timestamp}</span>
+                    <span class="text-[10px] text-slate-500 font-mono">${data.timestamp ? (typeof data.timestamp === 'string' ? data.timestamp : new Date(data.timestamp).toLocaleTimeString('id-ID')) : new Date().toLocaleTimeString('id-ID')}</span>
                 </div>
                 <p class="text-xs text-slate-400 leading-relaxed">${data.message}</p>
             `;
-            
-            // Masukkan notifikasi baru ke paling atas
             notifList.prepend(item);
-            
-            // Update Terminal Log
-            logText.textContent = `// Memproses Payload: "${data.title}"`;
-            logText.className = colorClass;
-        });
+        }
     </script>
 </body>
 </html>
