@@ -34,6 +34,7 @@
         .msg.system { background: none; color: var(--text-muted); font-size: 11px; font-style: italic; align-self: center; padding: 4px; }
         .msg.me { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
         .msg.other { background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main); align-self: flex-start; border-bottom-left-radius: 4px; }
+        .msg-sender { font-weight: 700; font-size: 11px; color: var(--accent); margin-bottom: 2px; display: block; }
         .chat-input-row { display: flex; gap: 10px; }
         .btn-primary { display: inline-flex; justify-content: center; align-items: center; gap: 8px; padding: 12px; border-radius: 10px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; transition: all 0.2s ease; background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #ffffff; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25); width: 100%; }
         .btn-primary:hover { background: linear-gradient(135deg, #1d4ed8, #1e40af); transform: translateY(-1px); }
@@ -49,6 +50,7 @@
     </div>
 
     <div class="app-card">
+        <!-- SEKSI PILIH KELAS -->
         <div id="join-section">
             <div class="brand-header">
                 <div class="brand-icon"><i data-lucide="users"></i></div>
@@ -70,6 +72,7 @@
             </button>
         </div>
 
+        <!-- SEKSI CHAT REALTIME -->
         <div id="chat-section" style="display:none;">
             <div class="brand-header" style="margin-bottom: 16px; text-align: left; display: flex; align-items: center; justify-content: space-between;">
                 <div style="display: flex; align-items: center; gap: 12px;">
@@ -81,7 +84,7 @@
                         <p style="font-size: 12px;" id="login-as-text">Login sebagai: -</p>
                     </div>
                 </div>
-                <button onclick="location.reload()" style="background:transparent; border:1px solid #334155; color:#94a3b8; padding: 6px 12px; border-radius:8px; cursor:pointer; font-size:12px;">Keluar</button>
+                <button onclick="keluarRuangan()" style="background:transparent; border:1px solid #334155; color:#94a3b8; padding: 6px 12px; border-radius:8px; cursor:pointer; font-size:12px;">Keluar</button>
             </div>
             <div id="chat-box"></div>
             <div class="chat-input-row">
@@ -101,11 +104,11 @@
     <script>
         lucide.createIcons();
 
-        let socket;
+        let socket = null;
         let currentRoom = '';
         let currentUsername = ''; 
 
-        // TANGKAP TOKEN DARI URL (Hasil dari modifikasi Auth temanmu)
+        // TANGKAP TOKEN DARI URL (Hasil redirect dari Auth Service)
         const urlParams = new URLSearchParams(window.location.search);
         const tokenFromUrl = urlParams.get('token');
         
@@ -120,46 +123,69 @@
             alert("Akses Ditolak! Anda belum login.\nSilakan login di Layanan Auth.");
             window.location.href = `http://${window.location.hostname}:3001`;
         } else {
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            currentUsername = payload.username;
-            document.getElementById('greeting').innerText = `Selamat datang, ${currentUsername}!`;
-            document.getElementById('login-as-text').innerText = `Login sebagai: ${currentUsername}`;
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                currentUsername = payload.username;
+                document.getElementById('greeting').innerText = `Selamat datang, ${currentUsername}!`;
+                document.getElementById('login-as-text').innerText = `Login sebagai: ${currentUsername}`;
+            } catch (err) {
+                alert("Token tidak valid. Silakan login ulang.");
+                window.location.href = `http://${window.location.hostname}:3001`;
+            }
         }
 
+        // AMBIL DAFTAR KELAS DARI API
         async function loadRooms() {
             try {
-                const res = await fetch(`http://${window.location.hostname}:3003/api/rooms`);
+                const res = await fetch('/api/rooms');
                 const rooms = await res.json();
                 const select = document.getElementById('room');
                 select.innerHTML = '<option value="">-- Pilih Kelas --</option>';
                 rooms.forEach(r => {
                     select.innerHTML += `<option value="${r.name}">${r.name}</option>`;
                 });
-            } catch (err) { console.error("Gagal memuat daftar kelas", err); }
+            } catch (err) { 
+                console.error("Gagal memuat daftar kelas", err); 
+            }
         }
         loadRooms();
 
+        // TAMBAH KELAS BARU VIA API
         async function buatKelasBaru() {
             const newRoom = prompt("Masukkan nama Ruang Kelas baru:");
-            if (newRoom) {
-                await fetch(`http://${window.location.hostname}:3003/api/rooms`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ roomName: newRoom })
-                });
-                loadRooms(); 
-                alert("Kelas baru berhasil dibuat!");
+            if (newRoom && newRoom.trim() !== '') {
+                try {
+                    const res = await fetch('/api/rooms', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ roomName: newRoom.trim() })
+                    });
+                    const result = await res.json();
+                    
+                    if (!res.ok) {
+                        return alert(result.error || "Gagal membuat kelas baru");
+                    }
+                    
+                    await loadRooms(); 
+                    alert("Kelas baru berhasil dibuat!");
+                } catch (err) {
+                    alert("Terjadi kesalahan koneksi saat membuat kelas.");
+                }
             }
         }
 
+        // GABUNG KE ROOM CHAT VIA SOCKET
         function joinRoom() {
             currentRoom = document.getElementById('room').value;
-            if(!currentRoom) return alert("Pilih kelas terlebih dahulu!");
+            if (!currentRoom) return alert("Pilih kelas terlebih dahulu!");
 
-            socket = io(`http://${window.location.hostname}:3003`, { auth: { token: token } });
+            // Tutup koneksi socket lama jika ada
+            if (socket) socket.disconnect();
+
+            socket = io(window.location.origin, { auth: { token: token } });
 
             socket.on("connect_error", (err) => {
-                alert("Sesi kadaluarsa. Silakan login kembali!");
+                alert("Sesi kadaluarsa atau token tidak valid. Silakan login kembali!");
                 window.location.href = `http://${window.location.hostname}:3001`;
             });
 
@@ -168,38 +194,73 @@
             document.getElementById('chat-section').style.display = 'block';
             document.getElementById('room-title').innerText = `Ruang: ${currentRoom}`;
 
+            // Tarik Riwayat Chat
             socket.on('load_group_history', (history) => {
                 document.getElementById('chat-box').innerHTML = ''; 
                 history.forEach(msg => {
                     if (msg.sender === currentUsername) {
                         displayMessage(msg.message, 'me');
                     } else {
-                        displayMessage(`<b>${msg.sender}:</b><br>${msg.message}`, 'other');
+                        displayMessage(msg.message, 'other', msg.sender);
                     }
                 });
             });
 
-            socket.on('receive_group_message', (data) => displayMessage(`<b>${data.sender}:</b><br>${data.message}`, 'other'));
-            socket.on('system_notification', (msg) => displayMessage(msg, 'system'));
+            // Menerima pesan dari user lain
+            socket.on('receive_group_message', (data) => {
+                displayMessage(data.message, 'other', data.sender);
+            });
+
+            // Menerima notifikasi sistem
+            socket.on('system_notification', (msg) => {
+                displayMessage(msg, 'system');
+            });
         }
 
-        function handleEnter(e) { if(e.key === 'Enter') sendMessage(); }
+        function handleEnter(e) { 
+            if (e.key === 'Enter') sendMessage(); 
+        }
 
+        // KIRIM PESAN CHAT
         function sendMessage() {
             const messageInput = document.getElementById('message');
             const message = messageInput.value.trim();
-            if(!message) return;
+            if (!message || !socket) return;
+
             const data = { room: currentRoom, message: message };
             socket.emit('send_group_message', data);
+            
             displayMessage(message, 'me'); 
             messageInput.value = ''; 
         }
 
-        function displayMessage(text, type) {
+        // KELUAR DARI RUANGAN
+        function keluarRuangan() {
+            if (socket) socket.disconnect();
+            location.reload();
+        }
+
+        // MENAMPILKAN PESAN DENGAN AMAN (Mencegah XSS)
+        function displayMessage(text, type, sender = null) {
             const chatBox = document.getElementById('chat-box');
             const div = document.createElement('div');
             div.className = `msg ${type}`;
-            div.innerHTML = text; 
+
+            if (type === 'system') {
+                div.textContent = text;
+            } else if (type === 'me') {
+                div.textContent = text;
+            } else if (type === 'other') {
+                const senderSpan = document.createElement('span');
+                senderSpan.className = 'msg-sender';
+                senderSpan.textContent = sender || 'Anonim';
+
+                const textNode = document.createTextNode(text);
+
+                div.appendChild(senderSpan);
+                div.appendChild(textNode);
+            }
+
             chatBox.appendChild(div);
             chatBox.scrollTop = chatBox.scrollHeight; 
         }

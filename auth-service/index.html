@@ -6,8 +6,22 @@
     <title>Auth Service - Campus Chat App</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- [TAMBAHAN]: Script Client Socket.io untuk menerima notifikasi real-time -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+
     <style>
-        :root { --primary: #1e3a8a; --accent: #3b82f6; --bg-main: #0f172a; --card-bg: #1e293b; --text-main: #f8fafc; --text-muted: #94a3b8; --border: #334155; --success: #10b981; }
+        :root { 
+            --primary: #1e3a8a; 
+            --accent: #3b82f6; 
+            --bg-main: #0f172a; 
+            --card-bg: #1e293b; 
+            --text-main: #f8fafc; 
+            --text-muted: #94a3b8; 
+            --border: #334155; 
+            --success: #10b981; 
+            --danger: #ef4444;
+        }
+
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
         body { background: radial-gradient(circle at top left, #1e1b4b, #0f172a); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 24px; }
         .auth-card { width: 100%; max-width: 460px; background-color: var(--card-bg); border: 1px solid var(--border); border-radius: 20px; padding: 40px; box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5); }
@@ -20,11 +34,43 @@
         .btn-primary { background: linear-gradient(135deg, var(--accent), var(--primary)); color: #ffffff; margin-bottom: 12px; }
         .btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--text-main); }
         .menu-grid { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; }
-        .menu-btn { display: flex; align-items: center; gap: 16px; padding: 16px; background: #0f172a; border: 1px solid var(--border); border-radius: 12px; color: var(--text-main); text-decoration: none; cursor: pointer; transition: all 0.2s ease; }
+        
+        .menu-btn { 
+            display: flex; 
+            align-items: center; 
+            gap: 16px; 
+            padding: 16px; 
+            background: #0f172a; 
+            border: 1px solid var(--border); 
+            border-radius: 12px; 
+            color: var(--text-main); 
+            text-decoration: none; 
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+            position: relative;
+        }
         .menu-btn:hover { border-color: var(--accent); transform: translateY(-2px); background: #1e293b; }
-        .menu-icon { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; }
+        .menu-icon { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; flex-shrink: 0; }
+        .menu-info { flex-grow: 1; }
         .menu-info h3 { font-size: 15px; margin-bottom: 2px; }
         .menu-info p { font-size: 12px; color: var(--text-muted); }
+
+        /* [TAMBAHAN]: CSS Badge Angka Notifikasi */
+        .notif-badge {
+            background-color: var(--danger);
+            color: #ffffff;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 999px;
+            min-width: 22px;
+            height: 22px;
+            display: none; /* Sembunyi jika 0 */
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+            margin-left: auto;
+        }
     </style>
 </head>
 <body>
@@ -54,25 +100,47 @@
             <p id="userGreeting" style="color: var(--success); font-weight: 600; margin-top: 4px;"></p>
         </div>
         <p style="font-size: 13px; color: var(--text-muted); text-align: center;">Silakan pilih layanan yang ingin kamu akses:</p>
+        
         <div class="menu-grid">
-            <div class="menu-btn" onclick="goToService(`http://${window.location.hostname}:3002`)">
+            <!-- Menu 1: Personal Chat -->
+            <div class="menu-btn" onclick="goToService(`http://${window.location.hostname}:3002`, 'personal')">
                 <div class="menu-icon" style="background: #10b981;"><i data-lucide="message-square"></i></div>
                 <div class="menu-info"><h3>Personal Chat</h3><p>Pesan langsung 1-on-1 (Node 2)</p></div>
+                <!-- Badge Notifikasi Angka -->
+                <span class="notif-badge" id="badge-personal">0</span>
             </div>
-            <div class="menu-btn" onclick="goToService(`http://${window.location.hostname}:3003`)">
+
+            <!-- Menu 2: Group Chat -->
+            <div class="menu-btn" onclick="goToService(`http://${window.location.hostname}:3003`, 'group')">
                 <div class="menu-icon" style="background: #3b82f6;"><i data-lucide="users"></i></div>
                 <div class="menu-info"><h3>Group Chat</h3><p>Ruang percakapan grup (Node 3)</p></div>
+                <!-- Badge Notifikasi Angka -->
+                <span class="notif-badge" id="badge-group">0</span>
             </div>
-            <div class="menu-btn" onclick="goToService(`http://${window.location.hostname}:3004`)">
+
+            <!-- Menu 3: Notification Chat -->
+            <div class="menu-btn" onclick="goToService(`http://${window.location.hostname}:3004`, 'notification')">
                 <div class="menu-icon" style="background: #f59e0b;"><i data-lucide="bell"></i></div>
                 <div class="menu-info"><h3>Notification Chat</h3><p>Layanan siaran & notifikasi (Node 4)</p></div>
+                <!-- Badge Notifikasi Angka -->
+                <span class="notif-badge" id="badge-notification">0</span>
             </div>
         </div>
+
         <button class="btn btn-secondary" style="margin-top: 24px;" onclick="handleLogout()"><i data-lucide="log-out" style="width:16px;"></i> Keluar / Logout</button>
     </div>
 
     <script>
         lucide.createIcons();
+
+        // Objek untuk menyimpan jumlah pesan belum dibaca
+        let unreadCounts = {
+            personal: 0,
+            group: 0,
+            notification: 0
+        };
+
+        let socketNotif = null;
 
         async function handleLogin() {
             const username = document.getElementById('username').value;
@@ -116,16 +184,59 @@
             document.getElementById('authSection').style.display = 'none';
             document.getElementById('dashboardSection').style.display = 'block';
             document.getElementById('userGreeting').innerText = `@${username}`;
+
+            // Inisialisasi koneksi Socket Notifikasi setelah login berhasil
+            initNotificationSocket(username);
         }
 
-        function goToService(url) {
-            // [MODIFIKASI PENTING]: Membawa token ke port yang berbeda
+        // [FUNGSI UTAMA]: Mengupdate tampilan badge angka
+        function updateBadge(type, count) {
+            unreadCounts[type] = count;
+            const badgeEl = document.getElementById(`badge-${type}`);
+            if (badgeEl) {
+                if (count > 0) {
+                    badgeEl.innerText = count > 99 ? '99+' : count;
+                    badgeEl.style.display = 'inline-flex';
+                } else {
+                    badgeEl.style.display = 'none';
+                }
+            }
+        }
+
+        // Connect ke Service Notification / Chat untuk mendengarkan pesan masuk
+        function initNotificationSocket(username) {
+            // Hubungkan ke Socket server (misal Port 3004 / 3002)
+            socketNotif = io(`http://${window.location.hostname}:3004`);
+
+            socketNotif.emit("register_user", username);
+
+            // Listener jika ada update jumlah notifikasi dari server
+            socketNotif.on("update_unread_count", (data) => {
+                // Contoh payload data dari server: { type: 'group', count: 3 }
+                if (data && data.type) {
+                    updateBadge(data.type, data.count);
+                }
+            });
+
+            // Listener jika pesan baru masuk secara langsung
+            socketNotif.on("pesan_baru", (data) => {
+                // Increment +1 pada kategori tertentu (personal/group/notification)
+                const type = data.type || 'notification';
+                unreadCounts[type] = (unreadCounts[type] || 0) + 1;
+                updateBadge(type, unreadCounts[type]);
+            });
+        }
+
+        function goToService(url, type) {
             const token = localStorage.getItem('authToken');
+            // Opsional: Reset badge saat menu dipencet (karena dianggap sudah dibuka)
+            updateBadge(type, 0); 
             window.location.href = `${url}?token=${token}`;
         }
 
         function handleLogout() {
             localStorage.clear();
+            if (socketNotif) socketNotif.disconnect();
             document.getElementById('dashboardSection').style.display = 'none';
             document.getElementById('authSection').style.display = 'block';
             document.getElementById('username').value = '';

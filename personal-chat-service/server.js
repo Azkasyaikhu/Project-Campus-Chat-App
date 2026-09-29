@@ -3,13 +3,15 @@ const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const mongoose = require('mongoose');
-const jwt = require('jsonwebtoken'); // [DITAMBAHKAN] Untuk verifikasi SSO
+const jwt = require('jsonwebtoken');
+const axios = require('axios');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-const JWT_SECRET = 'kunci_rahasia_campus_chat_2026';
+const JWT_SECRET = process.env.JWT_SECRET || 'kunci_rahasia_campus_chat_2026';
+const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3004/api/notify';
 
 // MENYAJIKAN FILE HTML SECARA OTOMATIS
 app.use(express.static('.'));
@@ -22,11 +24,11 @@ const io = new Server(server, {
     cors: { origin: "*", methods: ["GET", "POST"] }
 });
 
-// KONEKSI MONGODB ATLAS CLOUD (UNTUK CHAT)
-const MONGO_URI = "mongodb+srv://azkasyaikhu0917_db_user:aK5LAb4MHvy6mEpF@cluster0.v8j6a5q.mongodb.net/campus_chat_messages?appName=Cluster0";
+// KONEKSI MONGODB ATLAS CLOUD (DATABASE: campus_chat)
+const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://azkasyaikhu0917_db_user:aK5LAb4MHvy6mEpF@cluster0.v8j6a5q.mongodb.net/campus_chat?appName=Cluster0";
 
 mongoose.connect(MONGO_URI)
-    .then(() => console.log('✅ MongoDB Atlas (Personal Chat) Terhubung Berhasil!'))
+    .then(() => console.log('✅ MongoDB Atlas (Personal Chat Node #2) Terhubung!'))
     .catch(err => console.error('❌ Gagal Konek MongoDB:', err));
 
 const messageSchema = new mongoose.Schema({
@@ -36,11 +38,9 @@ const messageSchema = new mongoose.Schema({
     waktu: { type: Date, default: Date.now }
 });
 
-const Message = mongoose.model('Message', messageSchema);
+const Message = mongoose.model('Message', messageSchema, 'messages');
 
-let penggunaOnline = {};
-
-// [DITAMBAHKAN] Middleware Socket Autentikasi JWT
+// Middleware Socket Autentikasi JWT
 io.use((socket, next) => {
     const token = socket.handshake.auth.token;
     if (!token) return next(new Error("Token tidak valid"));
@@ -53,10 +53,10 @@ io.use((socket, next) => {
 });
 
 io.on('connection', (socket) => {
-    // Registrasi otomatis menggunakan identitas dari Token JWT
     const namaUser = socket.username;
-    penggunaOnline[namaUser] = socket.id;
-    console.log(`🔌 [LOG] ${namaUser} terhubung | Socket ID: ${socket.id}`);
+    
+    socket.join(namaUser);
+    console.log(`🔌 [LOG] ${namaUser} terhubung ke Room "${namaUser}" | Socket ID: ${socket.id}`);
 
     // Mengambil riwayat chat dari MongoDB
     socket.on('get_chat_history', async (data) => {
@@ -77,7 +77,6 @@ io.on('connection', (socket) => {
 
     // Menerima dan meneruskan pesan
     socket.on('private_message', async (data) => {
-        // [KEAMANAN] Pengirim otomatis menggunakan username dari Token, bukan dari inputan user
         const pengirim = socket.username; 
         const { penerima, pesan } = data;
 
@@ -85,29 +84,41 @@ io.on('connection', (socket) => {
             const pesanBaru = new Message({ pengirim, penerima, pesan });
             await pesanBaru.save();
 
-            socket.emit('pesan_terkirim', { pengirim, penerima, pesan });
+            // 1. Konfirmasi ke pengirim
+            socket.emit('pesan_terkirim', { pengirim, penerima, pesan, waktu: pesanBaru.waktu });
 
-            const socketIdPenerima = penggunaOnline[penerima];
-            if (socketIdPenerima) {
-                io.to(socketIdPenerima).emit('terima_pesan', { pengirim, penerima, pesan });
-                console.log(`📤 Pesan dari ${pengirim} dikirim real-time ke ${penerima}`);
-            } else {
-                console.log(`ℹ️ Pesan untuk ${penerima} tersimpan di database (User offline).`);
-            }
+            // 2. Kirim ke room penerima
+            io.to(penerima).emit('terima_pesan', { pengirim, penerima, pesan, waktu: pesanBaru.waktu });
+
+            // 3. Signal update badge/counter UI
+            io.to(penerima).emit('pesan_baru', {
+                type: 'personal',
+                pengirim: pengirim
+            });
+
+            // 4. TRIGGER KE NODE #4 (NOTIFICATION GATEWAY) KHUSUS PENERIMA
+            axios.post(NOTIFICATION_SERVICE_URL, {
+                targetUser: penerima,
+                title: `Pesan Baru dari @${pengirim}`,
+                message: pesan,
+                type: 'info'
+            }).catch(err => {
+                console.error('⚠️ Gagal mengirimkan trigger ke Notification Node:', err.message);
+            });
+
+            console.log(`📤 Pesan dari ${pengirim} dikirim real-time ke room ${penerima}`);
         } catch (error) {
             console.error("Gagal menyimpan pesan:", error);
             socket.emit('error_message', 'Gagal mengirim pesan ke server.');
         }
     });
 
-    // Handle disconnect
     socket.on('disconnect', () => {
         console.log(`❌ ${socket.username} terputus dari jaringan.`);
-        delete penggunaOnline[socket.username];
     });
 });
 
-const PORT = 3002;
+const PORT = process.env.PORT || 3002;
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`=================================`);
     console.log(`✅ Personal Chat Service (Port ${PORT}) Running!`);
